@@ -48,7 +48,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  res.json({ url: `http://localhost:5000/uploads/${req.file.filename}` });
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  res.json({ url: `${baseUrl}/uploads/${req.file.filename}` });
 });
 
 // Helper to parse product JSON fields safely
