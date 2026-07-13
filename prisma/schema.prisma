@@ -13,6 +13,7 @@ model User {
   email     String   @unique
   password  String
   role      String   @default("customer")
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
@@ -51,13 +52,32 @@ model Order {
   id            String      @id @default(uuid())
   customerId    Int?
   customer      User?       @relation(fields: [customerId], references: [id])
-  status        String      @default("Pending") // Pending, Completed, Cancelled
-  source        String      @default("Online")  // Online, POS
-  paymentMethod String      @default("Credit Card")
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+  status        String      @default("Pending")
+  source        String      @default("Online")
+  paymentMethod String      @default("Midtrans")
+  midtransToken String?
+  
+  shippingAddress  String?   @db.Text
+  shippingCity     String?
+  shippingProvince String?
+  shippingPostal   String?
+  shippingCourier  String?
+  shippingCost     Float     @default(0)
+  
+  discount         Float     @default(0)
+  voucherCode      String?
+
+  trackingCode     String?
+  biteshipOrderId  String?
+
   subtotal      Float
   tax           Float
   total         Float
   date          DateTime    @default(now())
+  expiresAt     DateTime?
   items         OrderItem[]
 }
 
@@ -69,6 +89,7 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
+  size      String?
 }
 
 model Campaign {
@@ -78,4 +99,10 @@ model Campaign {
   status      String   @default("Active")
   startDate   DateTime @default(now())
   endDate     DateTime
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text
 }

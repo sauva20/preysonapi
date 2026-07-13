@@ -7,10 +7,22 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const midtransClient = require('midtrans-client');
+const axios = require('axios');
+const http = require('http');
+const { Server } = require('socket.io');
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*' }
+});
+
+// Make io accessible to routes
+app.set('io', io);
+
 const prisma = new PrismaClient();
 
 app.use(cors());
@@ -145,6 +157,7 @@ app.put('/api/products/:id', async (req, res) => {
       },
       include: { category: true }
     });
+    io.emit('stock_updated');
     res.json(parseProduct(product));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -248,6 +261,8 @@ app.post('/api/orders', async (req, res) => {
       return newOrder;
     });
     
+    io.emit('stock_updated');
+    
     // Send email receipt if email is provided
     if (customerEmail) {
       try {
@@ -299,32 +314,7 @@ app.put('/api/orders/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================
-// SETTINGS API
-// ==========================
-const settingsPath = path.join(__dirname, 'settings.json');
-
-app.get('/api/settings', (req, res) => {
-  try {
-    if (fs.existsSync(settingsPath)) {
-      const data = fs.readFileSync(settingsPath, 'utf8');
-      res.json(JSON.parse(data));
-    } else {
-      res.json({});
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/settings', (req, res) => {
-  try {
-    fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2), 'utf8');
-    res.json({ success: true, settings: req.body });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Removed file-based settings API
 
 // ==========================
 // CUSTOMERS API
@@ -369,6 +359,50 @@ app.delete('/api/campaigns/:id', async (req, res) => {
 });
 
 // ==========================
+// STAFF API
+// ==========================
+
+app.get('/api/staff', async (req, res) => {
+  try {
+    const staff = await prisma.user.findMany({
+      where: { role: { not: 'customer' } },
+      select: { id: true, name: true, email: true, role: true, status: true, createdAt: true }
+    });
+    res.json(staff);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/staff', async (req, res) => {
+  const { name, email, password, role } = req.body;
+  if (!name || !email || !password || !role) return res.status(400).json({ error: 'All fields required' });
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const staff = await prisma.user.create({
+      data: { name, email, password: hashedPassword, role, status: 'ACTIVE' }
+    });
+    res.json({ id: staff.id, name: staff.name, email: staff.email, role: staff.role, status: staff.status });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/staff/:id', async (req, res) => {
+  const { role, status } = req.body;
+  try {
+    const updated = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { role, status }
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/staff/:id', async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==========================
 // AUTH API
 // ==========================
 
@@ -378,8 +412,8 @@ app.post('/api/auth/admin-login', async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || user.role !== 'admin') {
-      return res.status(401).json({ error: 'Invalid admin credentials' });
+    if (!user || user.role === 'customer') {
+      return res.status(401).json({ error: 'Invalid credentials or unauthorized role' });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
@@ -447,7 +481,461 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
+// ==========================
+// CHECKOUT API
+// ==========================
+
+// 1. Validate Voucher
+app.post('/api/checkout/validate-voucher', async (req, res) => {
+  const { code } = req.body;
+  try {
+    const campaign = await prisma.campaign.findUnique({ where: { code } });
+    if (!campaign) return res.status(404).json({ error: 'Voucher not found' });
+    if (campaign.status !== 'Active') return res.status(400).json({ error: 'Voucher inactive' });
+    if (new Date() > new Date(campaign.endDate)) return res.status(400).json({ error: 'Voucher expired' });
+    
+    res.json({ discountPct: campaign.discountPct });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// 1.5 Search Area (Biteship)
+app.get('/api/checkout/search-area', async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.json({ areas: [] });
+
+  try {
+    const bitesKeySetting = await prisma.setting.findUnique({ where: { key: 'biteship_api_key' }});
+    const BITES_KEY = bitesKeySetting ? bitesKeySetting.value : '';
+    
+    if (!BITES_KEY || BITES_KEY === 'dummy_biteship_key' || BITES_KEY === '') {
+      const q = query.toLowerCase();
+      const mockAreas = [
+        { id: 'area_1', name: 'Kebayoran Baru', administrative_division_level_2_name: 'Jakarta Selatan', administrative_division_level_1_name: 'DKI Jakarta', postal_code: 12110 },
+        { id: 'area_2', name: 'Kebayoran Lama', administrative_division_level_2_name: 'Jakarta Selatan', administrative_division_level_1_name: 'DKI Jakarta', postal_code: 12240 },
+        { id: 'area_3', name: 'Pagaden', administrative_division_level_2_name: 'Subang', administrative_division_level_1_name: 'Jawa Barat', postal_code: 41252 },
+        { id: 'area_4', name: 'Pagaden Barat', administrative_division_level_2_name: 'Subang', administrative_division_level_1_name: 'Jawa Barat', postal_code: 41253 },
+        { id: 'area_5', name: 'Bandung Wetan', administrative_division_level_2_name: 'Bandung', administrative_division_level_1_name: 'Jawa Barat', postal_code: 40115 },
+        { id: 'area_6', name: 'Buahbatu', administrative_division_level_2_name: 'Bandung', administrative_division_level_1_name: 'Jawa Barat', postal_code: 40286 },
+        { id: 'area_7', name: 'Buahdua', administrative_division_level_2_name: 'Sumedang', administrative_division_level_1_name: 'Jawa Barat', postal_code: 45392 }
+      ];
+      const filtered = mockAreas.filter(a => a.name.toLowerCase().includes(q) || a.administrative_division_level_2_name.toLowerCase().includes(q));
+      return res.json({ areas: filtered });
+    }
+
+    const response = await axios.get(`https://api.biteship.com/v1/maps/areas?countries=ID&input=${encodeURIComponent(query)}&type=single`, {
+      headers: { 'authorization': `Bearer ${BITES_KEY}` }
+    });
+
+    if (response.data && response.data.areas) {
+      res.json({ areas: response.data.areas });
+    } else {
+      res.json({ areas: [] });
+    }
+  } catch(e) {
+    console.error("Biteship Area Search error:", e.message);
+    res.json({ areas: [] });
+  }
+});
+
+// 2. Biteship Rates
+app.post('/api/checkout/shipping-rates', async (req, res) => {
+  const { destinationAreaId, destinationPostal } = req.body;
+  try {
+    const bitesKeySetting = await prisma.setting.findUnique({ where: { key: 'biteship_api_key' }});
+    const BITES_KEY = bitesKeySetting ? bitesKeySetting.value : '';
+    
+    if (!BITES_KEY || BITES_KEY === 'dummy_biteship_key' || BITES_KEY === '') {
+      return res.json({
+        rates: [
+          { courier: 'JNE', service: 'REG', price: 15000, etd: '2-3 days' },
+          { courier: 'Sicepat', service: 'BEST', price: 20000, etd: '1-2 days' }
+        ]
+      });
+    }
+
+    const postalSetting = await prisma.setting.findUnique({ where: { key: 'store_postal_code' }});
+    const areaSetting = await prisma.setting.findUnique({ where: { key: 'store_area_id' }});
+    const originPostal = postalSetting ? postalSetting.value : '40115';
+    const originAreaId = areaSetting ? areaSetting.value : null;
+    
+    // We prioritize area_id if provided, otherwise fallback to postal_code
+    const payload = {
+      couriers: "jne,sicepat,jnt,anteraja,tiki,pos,ninja,lion,idexpress,gosend,grab",
+      items: [
+        {
+          name: "Apparel",
+          description: "Preyson product",
+          value: 150000,
+          weight: 500
+        }
+      ]
+    };
+
+    if (originAreaId) {
+      payload.origin_area_id = originAreaId;
+    } else {
+      payload.origin_postal_code = parseInt(originPostal);
+    }
+
+    if (destinationAreaId) {
+      payload.destination_area_id = destinationAreaId;
+    } else {
+      payload.destination_postal_code = parseInt(destinationPostal);
+    }
+    
+    const response = await axios.post('https://api.biteship.com/v1/rates/couriers', payload, {
+      headers: {
+        'authorization': `Bearer ${BITES_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.data && response.data.pricing) {
+      const formattedRates = response.data.pricing.map(p => ({
+        courier: p.company,
+        service: p.type,
+        price: p.price,
+        etd: p.estimated_delivery || 'N/A'
+      }));
+      res.json({ rates: formattedRates });
+    } else {
+      res.json({ rates: [] });
+    }
+  } catch(e) {
+    console.error("Biteship error:", e.response?.data || e.message);
+    res.status(500).json({ error: 'Failed to fetch rates from Biteship' });
+  }
+});
+
+// 3. Process Checkout (Create Order & Midtrans Token)
+app.post('/api/checkout/process', async (req, res) => {
+  console.log("Received checkout request:", req.body);
+  const {
+    customerName, customerEmail, customerPhone,
+    shippingAddress, shippingCity, shippingProvince, shippingPostal, shippingCourier, shippingCost,
+    discount, voucherCode, subtotal, tax, total, items, customerId
+  } = req.body;
+
+  try {
+    // 1. Verify and deduct stock
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product) return res.status(400).json({ error: `Product ${item.productId} not found` });
+      
+      let sizesObj = [];
+      try { sizesObj = JSON.parse(product.sizes); } catch (e) {}
+      
+      let sizeIdx = -1;
+      let sizeStock = 999;
+      if (item.size) {
+        sizeIdx = sizesObj.findIndex(s => (typeof s === 'string' ? s : s.name) === item.size);
+        if (sizeIdx > -1) {
+          const sObj = sizesObj[sizeIdx];
+          sizeStock = typeof sObj === 'string' ? 999 : (sObj.stock || 0);
+        } else {
+          return res.status(400).json({ error: `Size ${item.size} not found for ${product.name}` });
+        }
+      } else {
+        sizeStock = product.stock; // global fallback
+      }
+
+      if (item.quantity > sizeStock || item.quantity > product.stock) {
+        return res.status(400).json({ error: `Insufficient stock for ${product.name} (Size: ${item.size || 'N/A'})` });
+      }
+      
+      // Deduct stock
+      let newSizes = [...sizesObj];
+      if (sizeIdx > -1 && typeof newSizes[sizeIdx] !== 'string') {
+        newSizes[sizeIdx].stock -= item.quantity;
+      }
+      
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          stock: product.stock - item.quantity,
+          sizes: JSON.stringify(newSizes)
+        }
+      });
+    }
+
+    io.emit('stock_updated');
+
+    const serverKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_server_key' }});
+    const clientKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_client_key' }});
+    const isProdSetting = await prisma.setting.findUnique({ where: { key: 'midtrans_is_production' }});
+    
+    const isProduction = isProdSetting ? isProdSetting.value === 'true' : false;
+    const serverKey = serverKeySetting ? serverKeySetting.value : '';
+    const clientKey = clientKeySetting ? clientKeySetting.value : '';
+
+    const customOrderId = 'PRY-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    const order = await prisma.order.create({
+      data: {
+        id: customOrderId,
+        customerName, customerEmail, customerPhone, customerId,
+        shippingAddress, shippingCity, shippingProvince, shippingPostal: String(shippingPostal), shippingCourier, shippingCost,
+        discount, voucherCode, subtotal, tax, total,
+        paymentMethod: 'Midtrans',
+        expiresAt,
+        items: {
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            size: item.size || null
+          }))
+        }
+      }
+    });
+
+    if (serverKey && serverKey !== 'dummy_server_key') {
+      const snap = new midtransClient.Snap({
+        isProduction,
+        serverKey,
+        clientKey
+      });
+      const parameter = {
+        transaction_details: {
+          order_id: order.id,
+          gross_amount: Math.round(total)
+        },
+        customer_details: {
+          first_name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+        }
+      };
+      
+      const transaction = await snap.createTransaction(parameter);
+      
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { midtransToken: transaction.token }
+      });
+      
+      res.json({ orderId: order.id, token: transaction.token });
+    } else {
+      res.json({ orderId: order.id, token: 'dummy_token' });
+    }
+  } catch (error) {
+    console.error('Checkout error:', error);
+    res.status(500).json({ error: 'Failed to process checkout' });
+  }
+});
+
+// ==========================
+// ORDERS API
+// ==========================
+app.get('/api/orders/:id', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: {
+        items: {
+          include: { product: true }
+        }
+      }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/orders/:id/payment-status', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json({
+      status: order.status,
+      midtransToken: order.midtransToken,
+      expiresAt: order.expiresAt
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Helper function to restore stock
+const restoreOrderStock = async (orderId) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true }
+  });
+  if (!order || order.status !== 'Pending') return;
+
+  for (const item of order.items) {
+    const product = await prisma.product.findUnique({ where: { id: item.productId } });
+    if (!product) continue;
+    
+    let sizesObj = [];
+    try { sizesObj = JSON.parse(product.sizes); } catch (e) {}
+    
+    let newSizes = [...sizesObj];
+    if (item.size) {
+      const sizeIdx = newSizes.findIndex(s => (typeof s === 'string' ? s : s.name) === item.size);
+      if (sizeIdx > -1 && typeof newSizes[sizeIdx] !== 'string') {
+        newSizes[sizeIdx].stock += item.quantity;
+      }
+    }
+
+    await prisma.product.update({
+      where: { id: product.id },
+      data: {
+        stock: product.stock + item.quantity,
+        sizes: JSON.stringify(newSizes)
+      }
+    });
+  }
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'Expired' }
+  });
+  
+  io.emit('stock_updated');
+};
+
+app.post('/api/orders/:id/cancel', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order || order.status !== 'Pending') {
+      return res.status(400).json({ error: 'Cannot cancel this order' });
+    }
+    await restoreOrderStock(order.id);
+    res.json({ success: true, message: 'Order expired and stock restored' });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Background cron: Check for expired orders every 1 minute
+setInterval(async () => {
+  try {
+    const expiredOrders = await prisma.order.findMany({
+      where: {
+        status: 'Pending',
+        expiresAt: { lt: new Date() }
+      }
+    });
+    for (const order of expiredOrders) {
+      console.log(`Auto-expiring order ${order.id}...`);
+      await restoreOrderStock(order.id);
+    }
+  } catch (e) {
+    console.error("Cron Error: Failed to expire orders", e);
+  }
+}, 60 * 1000);
+
+
+app.post('/api/orders/:id/ship', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const bitesKeySetting = await prisma.setting.findUnique({ where: { key: 'biteship_api_key' }});
+    const BITES_KEY = bitesKeySetting ? bitesKeySetting.value : '';
+    
+    if (!BITES_KEY || BITES_KEY === 'dummy_biteship_key') {
+      return res.status(400).json({ error: 'Biteship API Key is not configured' });
+    }
+
+    const postalSetting = await prisma.setting.findUnique({ where: { key: 'store_postal_code' }});
+    const originPostal = postalSetting ? postalSetting.value : '40115';
+
+    // Call Biteship Create Order API
+    const payload = {
+      origin_contact_name: "Preyson Admin",
+      origin_contact_phone: "081234567890",
+      origin_address: "Preyson Moto Company Store",
+      origin_postal_code: parseInt(originPostal),
+      destination_contact_name: order.customerName,
+      destination_contact_phone: order.customerPhone,
+      destination_address: order.shippingAddress,
+      destination_postal_code: parseInt(order.shippingPostal),
+      courier_company: order.shippingCourier.toLowerCase(),
+      courier_type: "reg",
+      delivery_type: "now",
+      items: [
+        {
+          name: "Preyson Apparel",
+          value: order.subtotal,
+          weight: 500
+        }
+      ]
+    };
+
+    const biteshipRes = await axios.post('https://api.biteship.com/v1/orders', payload, {
+      headers: { authorization: BITES_KEY, 'content-type': 'application/json' }
+    });
+
+    const trackingCode = biteshipRes.data.courier.waybill_id;
+    const biteshipOrderId = biteshipRes.data.id;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { trackingCode, biteshipOrderId, status: 'Shipped' }
+    });
+
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error("Biteship shipment error:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to create shipment with Biteship' });
+  }
+});
+
+// ==========================
+// SETTINGS API
+// ==========================
+app.get('/api/settings', async (req, res) => {
+  try {
+    const settings = await prisma.setting.findMany();
+    const config = {};
+    settings.forEach(s => { config[s.key] = s.value; });
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/settings', async (req, res) => {
+  const settingsObj = req.body;
+  try {
+    for (const [key, value] of Object.entries(settingsObj)) {
+      await prisma.setting.upsert({
+        where: { key },
+        update: { value: String(value) },
+        create: { key, value: String(value) }
+      });
+    }
+    res.json({ message: 'Settings saved successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Checkout config (public keys)
+app.get('/api/checkout/config', async (req, res) => {
+  try {
+    const clientKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_client_key' }});
+    const isProdSetting = await prisma.setting.findUnique({ where: { key: 'midtrans_is_production' }});
+    res.json({
+      clientKey: clientKeySetting ? clientKeySetting.value : '',
+      isProduction: isProdSetting ? isProdSetting.value === 'true' : false
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

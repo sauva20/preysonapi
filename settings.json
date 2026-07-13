@@ -1,3 +1,14 @@
 {
-  "qrisStaticString": "00020101021126570011ID.DANA.WWW011893600915382779171902098277917190303UMI51440014ID.CO.QRIS.WWW0215ID10253728215000303UMI5204490053033605802ID5910Toko Nurul6013Kab. Karawang61054137363044AC9"
+  "midtrans_server_key": "SB-Mid-server-F2bp1WB4iTLx00j-hFCWrx0t",
+  "midtrans_client_key": "SB-Mid-client-MWbAqvAwQOA9zQCW",
+  "midtrans_is_production": "false",
+  "biteship_api_key": "biteship_live.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoicHJleXNvbiIsInVzZXJJZCI6IjY4NzBhNDQ5OGZiMjZkMDAxM2M4YTY2ZSIsImlhdCI6MTc4Mzk0OTExNH0.y_zB8e9MnOSOxJZeZMLEr9NWaINo8EIXoTDML2bMw1Q",
+  "store_name": "Preyson Moto",
+  "store_email": "hello@preysonmoto.com",
+  "store_phone": "+62 812 3456 7890",
+  "store_address": "disni",
+  "store_city": "Bandung",
+  "store_province": "Jawa Barat",
+  "store_postal_code": 40286,
+  "store_timezone": "Asia/Jakarta"
 }
