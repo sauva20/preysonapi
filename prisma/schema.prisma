@@ -3,7 +3,6 @@ generator client {
   engineType = "binary"
 }
 
-
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -19,6 +18,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+
+  @@map("user")
 }
 
 model Category {
@@ -26,28 +27,32 @@ model Category {
   name      String    @unique
   image     String?
   products  Product[]
+
+  @@map("category")
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String
-  sku         String   @unique
-  price       Float
-  image       String
-  stock       Int      @default(0)
-  sold        Int      @default(0)
-  description String   @db.Text
-  sizes       String   // stored as JSON string '["S", "M", "L"]'
-  thumbnails  String   // stored as JSON string
-  features    String   @db.Text // stored as JSON string
-  materials   String   @db.Text // stored as JSON string
-  washing     String   @db.Text // stored as JSON string
-  categoryId  Int?
-  category    Category? @relation(fields: [categoryId], references: [id])
+  id             Int        @id @default(autoincrement())
+  name           String
+  sku            String     @unique
+  price          Float
+  image          String
+  stock          Int        @default(0)
+  sold           Int        @default(0)
+  description    String     @db.Text
+  sizes          String     // stored as JSON string
+  thumbnails     String     // stored as JSON string
+  features       String     @db.Text
+  materials      String     @db.Text
+  washing        String     @db.Text
+  categoryId     Int?
+  category       Category?  @relation(fields: [categoryId], references: [id])
   aestheticImage String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItems  OrderItem[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  orderItems     OrderItem[]
+
+  @@map("product")
 }
 
 model Order {
@@ -61,14 +66,14 @@ model Order {
   source        String      @default("Online")
   paymentMethod String      @default("Midtrans")
   midtransToken String?
-  
+
   shippingAddress  String?   @db.Text
   shippingCity     String?
   shippingProvince String?
   shippingPostal   String?
   shippingCourier  String?
   shippingCost     Float     @default(0)
-  
+
   discount         Float     @default(0)
   voucherCode      String?
 
@@ -81,6 +86,8 @@ model Order {
   date          DateTime    @default(now())
   expiresAt     DateTime?
   items         OrderItem[]
+
+  @@map("order")
 }
 
 model OrderItem {
@@ -92,6 +99,8 @@ model OrderItem {
   quantity  Int
   price     Float
   size      String?
+
+  @@map("orderitem")
 }
 
 model Campaign {
@@ -101,10 +110,14 @@ model Campaign {
   status      String   @default("Active")
   startDate   DateTime @default(now())
   endDate     DateTime
+
+  @@map("campaign")
 }
 
 model Setting {
   id    Int    @id @default(autoincrement())
   key   String @unique
   value String @db.Text
+
+  @@map("setting")
 }
