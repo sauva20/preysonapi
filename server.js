@@ -56,6 +56,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 const parseProduct = (p) => ({
   ...p,
   sizes: p.sizes ? JSON.parse(p.sizes) : [],
+  sizeGuide: p.sizeGuide ? JSON.parse(p.sizeGuide) : null,
   thumbnails: p.thumbnails ? JSON.parse(p.thumbnails) : [],
   features: p.features ? JSON.parse(p.features) : [],
   materials: p.materials ? JSON.parse(p.materials) : [],
@@ -121,7 +122,7 @@ app.get('/api/products/:id', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, thumbnails, features, materials, washing, aestheticImage } = req.body;
+    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage } = req.body;
     const product = await prisma.product.create({
       data: {
         name, sku, price: parseFloat(price), stock: parseInt(stock), image,
@@ -129,6 +130,7 @@ app.post('/api/products', async (req, res) => {
         description: description || '',
         aestheticImage: aestheticImage || null,
         sizes: sizes ? JSON.stringify(sizes) : '[]',
+        sizeGuide: sizeGuide ? JSON.stringify(sizeGuide) : null,
         thumbnails: thumbnails ? JSON.stringify(thumbnails) : '[]',
         features: features ? JSON.stringify(features) : '[]',
         materials: materials ? JSON.stringify(materials) : '[]',
@@ -142,7 +144,7 @@ app.post('/api/products', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, thumbnails, features, materials, washing, aestheticImage } = req.body;
+    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage } = req.body;
     const product = await prisma.product.update({
       where: { id: parseInt(req.params.id) },
       data: {
@@ -151,6 +153,7 @@ app.put('/api/products/:id', async (req, res) => {
         description: description || '',
         aestheticImage: aestheticImage || null,
         sizes: sizes ? JSON.stringify(sizes) : '[]',
+        sizeGuide: sizeGuide ? JSON.stringify(sizeGuide) : null,
         thumbnails: thumbnails ? JSON.stringify(thumbnails) : '[]',
         features: features ? JSON.stringify(features) : '[]',
         materials: materials ? JSON.stringify(materials) : '[]',
