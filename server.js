@@ -52,16 +52,27 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ url: `${baseUrl}/uploads/${req.file.filename}` });
 });
 
-// Helper to parse product JSON fields safely
+// Helper to parse product JSON fields safely without crashing
+const safeParse = (str, fallback) => {
+  if (!str) return fallback;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    console.error('Invalid JSON in DB:', str);
+    return fallback;
+  }
+};
+
 const parseProduct = (p) => ({
   ...p,
-  sizes: p.sizes ? JSON.parse(p.sizes) : [],
-  sizeGuide: p.sizeGuide ? JSON.parse(p.sizeGuide) : null,
-  thumbnails: p.thumbnails ? JSON.parse(p.thumbnails) : [],
-  features: p.features ? JSON.parse(p.features) : [],
-  materials: p.materials ? JSON.parse(p.materials) : [],
-  washing: p.washing ? JSON.parse(p.washing) : []
+  sizes: safeParse(p.sizes, []),
+  sizeGuide: safeParse(p.sizeGuide, null),
+  thumbnails: safeParse(p.thumbnails, []),
+  features: safeParse(p.features, []),
+  materials: safeParse(p.materials, []),
+  washing: safeParse(p.washing, [])
 });
+
 
 // ==========================
 // DASHBOARD API
