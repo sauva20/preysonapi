@@ -58,11 +58,26 @@ const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Fallback: Jika gambar belum didownload di lokal, otomatis ambil dari server Hostinger
-app.use('/uploads/:filename', (req, res) => {
-  const remoteUrl = `https://api.preysonmoto.com/uploads/${req.params.filename}`;
-  res.redirect(remoteUrl);
+// Fallback: Hanya redirect jika dijalankan di localhost lokal (mencegah ERR_TOO_MANY_REDIRECTS di Hostinger)
+app.use('/uploads/:filename', (req, res, next) => {
+  const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
+  if (isLocal) {
+    const remoteUrl = `https://api.preysonmoto.com/uploads/${req.params.filename}`;
+    return res.redirect(remoteUrl);
+  }
+  return res.status(404).send('File not found');
 });
+
+// Auto-migrate missing columns in production MySQL if needed
+async function autoMigrate() {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`isSoldOut\` TINYINT(1) NOT NULL DEFAULT 0;`);
+    console.log('[AUTO-MIGRATE] Added isSoldOut column to product table.');
+  } catch (err) {
+    // Column already exists, safe to ignore
+  }
+}
+autoMigrate();
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
