@@ -14,6 +14,15 @@ const { Server } = require('socket.io');
 
 dotenv.config();
 
+// Global crash handlers to prevent Node process from dying on database disconnects / Hostinger timeouts
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL SERVER ERROR] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL SERVER ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
