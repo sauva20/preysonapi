@@ -39,6 +39,7 @@ model Product {
   image          String
   stock          Int        @default(0)
   sold           Int        @default(0)
+  isSoldOut      Boolean    @default(false)
   description    String     @db.Text
   sizes          String     // stored as JSON string
   sizeGuide      String?    @db.Text // stored as JSON string

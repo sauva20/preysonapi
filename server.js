@@ -14,6 +14,8 @@ const { Server } = require('socket.io');
 
 dotenv.config();
 
+const JWT_SECRET = process.env.JWT_SECRET || 'preyson_jwt_secret_key_2026';
+
 // Global crash handlers to prevent Node process from dying on database disconnects / Hostinger timeouts
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL SERVER ERROR] Uncaught Exception:', err);
@@ -55,13 +57,19 @@ const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Fallback: Jika gambar belum didownload di lokal, otomatis ambil dari server Hostinger
+app.use('/uploads/:filename', (req, res) => {
+  const remoteUrl = `https://api.preysonmoto.com/uploads/${req.params.filename}`;
+  res.redirect(remoteUrl);
+});
+
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
   res.json({ url: `${baseUrl}/uploads/${req.file.filename}` });
 });
 
-// Helper to parse product JSON fields safely without crashing
+// Helper to parse JSON fields safely without crashing
 const safeParse = (str, fallback) => {
   if (!str) return fallback;
   try {
@@ -72,15 +80,35 @@ const safeParse = (str, fallback) => {
   }
 };
 
-const parseProduct = (p) => ({
-  ...p,
-  sizes: safeParse(p.sizes, []),
-  sizeGuide: safeParse(p.sizeGuide, null),
-  thumbnails: safeParse(p.thumbnails, []),
-  features: safeParse(p.features, []),
-  materials: safeParse(p.materials, []),
-  washing: safeParse(p.washing, [])
-});
+// Helper to format upload URLs dynamically based on current server environment
+const formatImageUrl = (url, req) => {
+  if (!url || typeof url !== 'string') return url;
+  if (url.includes('/uploads/')) {
+    const filename = url.split('/uploads/').pop();
+    const baseUrl = process.env.BASE_URL || (req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:5000');
+    return `${baseUrl}/uploads/${filename}`;
+  }
+  return url;
+};
+
+const parseProduct = (p, req) => {
+  const rawThumbnails = safeParse(p.thumbnails, []);
+  const formattedThumbnails = Array.isArray(rawThumbnails)
+    ? rawThumbnails.map(t => formatImageUrl(t, req))
+    : rawThumbnails;
+
+  return {
+    ...p,
+    image: formatImageUrl(p.image, req),
+    aestheticImage: formatImageUrl(p.aestheticImage, req),
+    sizes: safeParse(p.sizes, []),
+    sizeGuide: safeParse(p.sizeGuide, null),
+    thumbnails: formattedThumbnails,
+    features: safeParse(p.features, []),
+    materials: safeParse(p.materials, []),
+    washing: safeParse(p.washing, [])
+  };
+};
 
 
 // ==========================
@@ -125,7 +153,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const products = await prisma.product.findMany({ include: { category: true } });
-    res.json(products.map(parseProduct));
+    res.json(products.map(p => parseProduct(p, req)));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -136,16 +164,17 @@ app.get('/api/products/:id', async (req, res) => {
       include: { category: true }
     });
     if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(parseProduct(product));
+    res.json(parseProduct(product, req));
   } catch (error) { res.status(500).json({ error: 'Failed to fetch product' }); }
 });
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage } = req.body;
+    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.create({
       data: {
         name, sku, price: parseFloat(price), stock: parseInt(stock), image,
+        isSoldOut: isSoldOut ? Boolean(isSoldOut) : false,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
         aestheticImage: aestheticImage || null,
@@ -164,11 +193,12 @@ app.post('/api/products', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage } = req.body;
+    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.update({
       where: { id: parseInt(req.params.id) },
       data: {
         name, sku, price: parseFloat(price), stock: parseInt(stock), image,
+        isSoldOut: isSoldOut !== undefined ? Boolean(isSoldOut) : undefined,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
         aestheticImage: aestheticImage || null,
@@ -183,6 +213,21 @@ app.put('/api/products/:id', async (req, res) => {
     });
     io.emit('stock_updated');
     res.json(parseProduct(product));
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.patch('/api/products/:id/toggle-soldout', async (req, res) => {
+  try {
+    const existing = await prisma.product.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!existing) return res.status(404).json({ error: 'Product not found' });
+    
+    const updated = await prisma.product.update({
+      where: { id: parseInt(req.params.id) },
+      data: { isSoldOut: !existing.isSoldOut },
+      include: { category: true }
+    });
+    io.emit('stock_updated');
+    res.json(parseProduct(updated));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -269,7 +314,8 @@ app.post('/api/orders', async (req, res) => {
             create: items.map(item => ({
               productId: parseInt(item.productId),
               quantity: parseInt(item.quantity),
-              price: parseFloat(item.price)
+              price: parseFloat(item.price),
+              size: item.size || null
             }))
           }
         },
@@ -277,10 +323,39 @@ app.post('/api/orders', async (req, res) => {
       });
       
       for (const item of items) {
-        await tx.product.update({
-          where: { id: parseInt(item.productId) },
-          data: { stock: { decrement: parseInt(item.quantity) }, sold: { increment: parseInt(item.quantity) } }
-        });
+        const prod = await tx.product.findUnique({ where: { id: parseInt(item.productId) } });
+        if (prod) {
+          let updatedSizesStr = prod.sizes;
+          if (prod.sizes && item.size) {
+            try {
+              let sizesObj = JSON.parse(prod.sizes);
+              if (Array.isArray(sizesObj)) {
+                sizesObj = sizesObj.map(s => {
+                  const sName = typeof s === 'string' ? s : (s.name || s.size);
+                  if (sName === item.size) {
+                    if (typeof s === 'object') {
+                      const curStk = typeof s.stock === 'number' ? s.stock : parseInt(s.stock || 0);
+                      return { ...s, stock: Math.max(0, curStk - parseInt(item.quantity)) };
+                    }
+                  }
+                  return s;
+                });
+                updatedSizesStr = JSON.stringify(sizesObj);
+              }
+            } catch (e) {
+              console.error('Error updating size stock in POST /api/orders:', e);
+            }
+          }
+
+          await tx.product.update({
+            where: { id: parseInt(item.productId) },
+            data: {
+              stock: Math.max(0, prod.stock - parseInt(item.quantity)),
+              sold: (prod.sold || 0) + parseInt(item.quantity),
+              sizes: updatedSizesStr
+            }
+          });
+        }
       }
       return newOrder;
     });
@@ -443,7 +518,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(401).json({ error: 'Invalid admin credentials' });
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     console.error(error);
@@ -464,7 +539,7 @@ app.post('/api/auth/customer-login', async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ message: 'Login successful', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     console.error(error);
