@@ -28,7 +28,8 @@ process.on('unhandledRejection', (reason, promise) => {
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { origin: '*' },
+  transports: ['polling', 'websocket']
 });
 
 // Make io accessible to routes
