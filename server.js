@@ -1176,7 +1176,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
     // Send Real Email using Nodemailer
     const transporter = nodemailer.createTransport({
-      host: 'mail.preysonmoto.com', 
+      host: 'smtp.hostinger.com', 
       port: 465,
       secure: true, // true for 465, false for other ports
       auth: {
