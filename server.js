@@ -26,17 +26,10 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' },
-  transports: ['polling', 'websocket']
-});
-
-// Make io accessible to routes
-app.set('io', io);
+app.set('io', null);
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
