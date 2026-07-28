@@ -992,7 +992,7 @@ app.post('/api/activities', (req, res) => {
       logs = JSON.parse(data);
     }
     const newAct = {
-      id: \`act-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: payload.timestamp || new Date().toISOString(),
       category: payload.category || 'Sistem',
       title: payload.title || 'Log',
