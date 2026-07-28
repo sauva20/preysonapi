@@ -1149,6 +1149,104 @@ app.get('/api/checkout/config', async (req, res) => {
 });
 
 // ==========================
+// CUSTOMER AUTH & OTP API
+// ==========================
+const otpStore = new Map();
+
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const cleanEmail = email.trim().toLowerCase();
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    otpStore.set(cleanEmail, {
+      code: otpCode,
+      expiresAt,
+      verified: false
+    });
+
+    console.log(`[AUTH OTP SENT] Email: ${cleanEmail} | OTP Code: ${otpCode}`);
+
+    res.json({
+      success: true,
+      message: `OTP Code sent to ${cleanEmail}`,
+      otp: otpCode
+    });
+  } catch (error) {
+    console.error("Send OTP Error:", error);
+    res.status(500).json({ error: 'Failed to send OTP code' });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP code are required' });
+
+    const cleanEmail = email.trim().toLowerCase();
+    const stored = otpStore.get(cleanEmail);
+
+    if (!stored) {
+      return res.status(400).json({ error: 'No active OTP request found for this email. Please request a new OTP.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      otpStore.delete(cleanEmail);
+      return res.status(400).json({ error: 'OTP code has expired. Please request a new one.' });
+    }
+
+    if (stored.code !== String(otp).trim()) {
+      return res.status(400).json({ error: 'Invalid OTP code. Please check and try again.' });
+    }
+
+    stored.verified = true;
+    res.json({ success: true, message: 'OTP verified successfully' });
+  } catch (error) {
+    console.error("Verify OTP Error:", error);
+    res.status(500).json({ error: 'Failed to verify OTP code' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: 'Email and new password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const stored = otpStore.get(cleanEmail);
+
+    if (otp) {
+      if (!stored || stored.code !== String(otp).trim()) {
+        return res.status(400).json({ error: 'Invalid or expired OTP code' });
+      }
+    } else if (!stored || !stored.verified) {
+      return res.status(400).json({ error: 'OTP verification required before changing password' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await prisma.user.findFirst({ where: { email: cleanEmail } });
+    if (user) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword }
+      });
+    }
+
+    otpStore.delete(cleanEmail);
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// ==========================
 // ACTIVITY LOG API
 // ==========================
 const ACTIVITIES_FILE = path.join(__dirname, 'activitylogs.json');
