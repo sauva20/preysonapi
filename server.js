@@ -969,6 +969,61 @@ app.post('/api/checkout/offline-sync', async (req, res) => {
 });
 
 // ==========================
+// ACTIVITIES API
+// ==========================
+const ACTIVITY_FILE = path.join(__dirname, 'activitylogs.json');
+
+app.get('/api/activities', (req, res) => {
+  try {
+    if (!fs.existsSync(ACTIVITY_FILE)) return res.json([]);
+    const data = fs.readFileSync(ACTIVITY_FILE, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read activities' });
+  }
+});
+
+app.post('/api/activities', (req, res) => {
+  try {
+    const payload = req.body;
+    let logs = [];
+    if (fs.existsSync(ACTIVITY_FILE)) {
+      const data = fs.readFileSync(ACTIVITY_FILE, 'utf8');
+      logs = JSON.parse(data);
+    }
+    const newAct = {
+      id: \`act-\${Date.now()}-\${Math.random().toString(36).substr(2, 4)}\`,
+      timestamp: payload.timestamp || new Date().toISOString(),
+      category: payload.category || 'Sistem',
+      title: payload.title || 'Log',
+      description: payload.description || '',
+      user: payload.user || 'Administrator',
+      status: payload.status || 'info'
+    };
+    logs = [newAct, ...logs].slice(0, 500);
+    fs.writeFileSync(ACTIVITY_FILE, JSON.stringify(logs, null, 2));
+    
+    const _io = app.get('io');
+    if (_io) _io.emit('activity_added', newAct);
+    
+    res.json(newAct);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save activity' });
+  }
+});
+
+app.delete('/api/activities', (req, res) => {
+  try {
+    fs.writeFileSync(ACTIVITY_FILE, JSON.stringify([]));
+    const _io = app.get('io');
+    if (_io) _io.emit('activities_cleared');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear activities' });
+  }
+});
+
+// ==========================
 // ORDERS API
 // ==========================
 app.get('/api/orders/:id', async (req, res) => {
