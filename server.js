@@ -1349,7 +1349,6 @@ app.get('/api/checkout/config', async (req, res) => {
 // ==========================
 // CUSTOMER AUTH & OTP API
 // ==========================
-const otpStore = new Map();
 
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
