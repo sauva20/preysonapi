@@ -1591,6 +1591,10 @@ app.get('/api/staff', async (req, res) => {
   }
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Catch-All JSON 404 Handler for API routes
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {
@@ -1598,3 +1602,5 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+module.exports = app;
