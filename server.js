@@ -179,7 +179,7 @@ app.get('/api/products', async (req, res) => {
       include: { category: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(products);
+    res.json(products.map(p => parseProduct(p, req)));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch products', details: error.message, stack: error.stack });
   }
@@ -313,7 +313,13 @@ app.get('/api/orders', async (req, res) => {
       include: { items: { include: { product: true } }, customer: true },
       orderBy: { date: 'desc' }
     });
-    res.json(orders);
+    res.json(orders.map(o => ({
+      ...o,
+      items: o.items.map(i => ({
+        ...i,
+        product: i.product ? parseProduct(i.product) : null
+      }))
+    })));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -445,7 +451,13 @@ app.post('/api/orders', async (req, res) => {
       }
     }
 
-    res.json(order);
+    res.json({
+      ...order,
+      items: order.items.map(i => ({
+        ...i,
+        product: i.product ? parseProduct(i.product) : null
+      }))
+    });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
