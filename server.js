@@ -70,23 +70,7 @@ app.use('/uploads/:filename', (req, res, next) => {
 });
 
 // Auto-migrate missing columns in production MySQL if needed
-async function autoMigrate() {
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`isSoldOut\` TINYINT(1) NOT NULL DEFAULT 0;`);
-    console.log('[AUTO-MIGRATE] Added isSoldOut column to product table.');
-  } catch (err) { }
-  
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`eventPrice\` DOUBLE NOT NULL DEFAULT 0;`);
-    console.log('[AUTO-MIGRATE] Added eventPrice column to product table.');
-  } catch (err) { }
-  
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`eventStock\` INT NOT NULL DEFAULT 0;`);
-    console.log('[AUTO-MIGRATE] Added eventStock column to product table.');
-  } catch (err) { }
-}
-autoMigrate();
+// Removed autoMigrate because columns already exist and it causes EAGAIN errors on Hostinger
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
