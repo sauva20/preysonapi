@@ -37,17 +37,217 @@ app.set('io', io);
 
 const prisma = new PrismaClient();
 
-app.use(cors());
+const corsOptions = {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: false,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
   next();
 });
+
 app.use(express.json());
+
+// In-memory OTP Store & Store Settings
+const otpStore = new Map();
+
+let storeSettingsMemory = {
+  storeName: 'PREYSON MOTO',
+  storeAddress: 'Bandung, West Java, Indonesia',
+  qrisStaticString: '00020101021126580014ID.GO.QRIS.WWW0118936009140000000000021500000000000000003033605802ID5912PREYSON MOTO6007BANDUNG61054011562070703A0163041234',
+  vatRate: 11,
+  shippingRate: 15000
+};
+
+// ==========================
+// STORE SETTINGS API
+// ==========================
+app.get('/api/settings', (req, res) => {
+  res.json(storeSettingsMemory);
+});
+
+app.post('/api/settings', (req, res) => {
+  storeSettingsMemory = { ...storeSettingsMemory, ...req.body };
+  res.json({ success: true, settings: storeSettingsMemory });
+});
+
+// ==========================
+// AUTHENTICATION API
+// ==========================
+app.post('/api/auth/admin-login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: email.trim() } });
+    if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Login server error: ' + err.message });
+  }
+});
+
+app.post('/api/auth/customer-login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: email.trim() } });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Customer login server error: ' + err.message });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password, phone } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.trim() } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email is already registered' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: email.trim(),
+        password: hashedPassword,
+        phone: phone || null,
+        role: 'customer'
+      }
+    });
+
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Registration error: ' + err.message });
+  }
+});
+
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    otpStore.set(email.trim(), { code, expiresAt, verified: false });
+
+    res.json({
+      success: true,
+      message: `OTP code sent to ${email}`,
+      otp: code
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
+
+    const stored = otpStore.get(email.trim());
+    if (!stored) {
+      return res.status(400).json({ error: 'No OTP requested for this email' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      otpStore.delete(email.trim());
+      return res.status(400).json({ error: 'OTP code has expired' });
+    }
+
+    if (stored.code !== otp.trim()) {
+      return res.status(400).json({ error: 'Invalid 6-digit OTP code' });
+    }
+
+    stored.verified = true;
+    otpStore.set(email.trim(), stored);
+
+    res.json({ success: true, message: 'OTP verified successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required' });
+    }
+
+    const stored = otpStore.get(email.trim());
+    if (!stored || stored.code !== otp.trim()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP verification code' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { email: email.trim() },
+      data: { password: hashedPassword }
+    });
+
+    otpStore.delete(email.trim());
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset password: ' + err.message });
+  }
+});
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
