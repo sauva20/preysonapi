@@ -45,8 +45,6 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-app.options('*', cors());
-
 app.use(express.json());
 
 // In-memory OTP Store & Store Settings
