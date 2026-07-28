@@ -254,7 +254,8 @@ app.put('/api/products/:id', async (req, res) => {
       },
       include: { category: true }
     });
-    io.emit('stock_updated');
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
     res.json(parseProduct(product));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -269,7 +270,8 @@ app.patch('/api/products/:id/toggle-soldout', async (req, res) => {
       data: { isSoldOut: !existing.isSoldOut },
       include: { category: true }
     });
-    io.emit('stock_updated');
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
     res.json(parseProduct(updated));
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -403,7 +405,8 @@ app.post('/api/orders', async (req, res) => {
       return newOrder;
     });
     
-    io.emit('stock_updated');
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
     
     // Send email receipt if email is provided
     if (customerEmail) {
@@ -802,7 +805,8 @@ app.post('/api/checkout/process', async (req, res) => {
       });
     }
 
-    io.emit('stock_updated');
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
 
     const serverKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_server_key' }});
     const clientKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_client_key' }});
@@ -942,7 +946,8 @@ const restoreOrderStock = async (orderId) => {
     data: { status: 'Expired' }
   });
   
-  io.emit('stock_updated');
+  const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
 };
 
 app.post('/api/orders/:id/cancel', async (req, res) => {
@@ -1301,6 +1306,7 @@ app.post('/api/activities', (req, res) => {
     const updated = [newActivity, ...current].slice(0, 500);
     saveActivities(updated);
 
+    const io = req.app.get('io');
     if (io) {
       io.emit('activity_added', newActivity);
     }
@@ -1315,6 +1321,7 @@ app.post('/api/activities', (req, res) => {
 app.delete('/api/activities', (req, res) => {
   try {
     saveActivities([]);
+    const io = req.app.get('io');
     if (io) {
       io.emit('activities_cleared');
     }
