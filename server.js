@@ -191,9 +191,14 @@ app.get('/api/dashboard/stats', async (req, res) => {
 // ==========================
 app.get('/api/products', async (req, res) => {
   try {
-    const products = await prisma.product.findMany({ include: { category: true } });
-    res.json(products.map(p => parseProduct(p, req)));
-  } catch (error) { res.status(500).json({ error: error.message }); }
+    const products = await prisma.product.findMany({
+      include: { category: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch products', details: error.message, stack: error.stack });
+  }
 });
 
 app.get('/api/products/:id', async (req, res) => {
