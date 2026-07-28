@@ -1407,9 +1407,12 @@ app.get('/api/staff', async (req, res) => {
   }
 });
 
-// Catch-All JSON 404 Handler for /api/* (Prevents 307 Redirects on missing endpoints)
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API endpoint not found' });
+// Catch-All JSON 404 Handler for API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  next();
 });
 
 const PORT = process.env.PORT || 5000;
