@@ -74,9 +74,17 @@ async function autoMigrate() {
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`isSoldOut\` TINYINT(1) NOT NULL DEFAULT 0;`);
     console.log('[AUTO-MIGRATE] Added isSoldOut column to product table.');
-  } catch (err) {
-    // Column already exists, safe to ignore
-  }
+  } catch (err) { }
+  
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`eventPrice\` DOUBLE NOT NULL DEFAULT 0;`);
+    console.log('[AUTO-MIGRATE] Added eventPrice column to product table.');
+  } catch (err) { }
+  
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE \`product\` ADD COLUMN \`eventStock\` INT NOT NULL DEFAULT 0;`);
+    console.log('[AUTO-MIGRATE] Added eventStock column to product table.');
+  } catch (err) { }
 }
 autoMigrate();
 
@@ -212,10 +220,10 @@ app.get('/api/products/:id', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
+    const { name, sku, price, eventPrice, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.create({
       data: {
-        name, sku, price: parseFloat(price), stock: parseInt(stock), image,
+        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : 0, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : 0, image,
         isSoldOut: isSoldOut ? Boolean(isSoldOut) : false,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
@@ -235,11 +243,11 @@ app.post('/api/products', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
   try {
-    const { name, sku, price, stock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
+    const { name, sku, price, eventPrice, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.update({
       where: { id: parseInt(req.params.id) },
       data: {
-        name, sku, price: parseFloat(price), stock: parseInt(stock), image,
+        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : undefined, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : undefined, image,
         isSoldOut: isSoldOut !== undefined ? Boolean(isSoldOut) : undefined,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
@@ -324,7 +332,7 @@ const nodemailer = require('nodemailer');
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customerId, customerName, customerEmail, items, paymentMethod, subtotal, tax, total, source } = req.body;
+    const { customerId, customerName, customerEmail, items, paymentMethod, subtotal, tax, total, source, isEvent } = req.body;
     
     let finalCustomerId = customerId ? parseInt(customerId) : null;
     
@@ -391,10 +399,14 @@ app.post('/api/orders', async (req, res) => {
             }
           }
 
+          const updatedStock = isEvent ? prod.stock : Math.max(0, prod.stock - parseInt(item.quantity));
+          const updatedEventStock = isEvent ? Math.max(0, prod.eventStock - parseInt(item.quantity)) : prod.eventStock;
+
           await tx.product.update({
             where: { id: parseInt(item.productId) },
             data: {
-              stock: Math.max(0, prod.stock - parseInt(item.quantity)),
+              stock: updatedStock,
+              eventStock: updatedEventStock,
               sold: (prod.sold || 0) + parseInt(item.quantity),
               sizes: updatedSizesStr
             }
@@ -869,6 +881,90 @@ app.post('/api/checkout/process', async (req, res) => {
   } catch (error) {
     console.error('Checkout error:', error);
     res.status(500).json({ error: 'Failed to process checkout' });
+  }
+});
+
+// 4. Offline Sync Endpoint (PWA POS)
+app.post('/api/checkout/offline-sync', async (req, res) => {
+  const { orders } = req.body;
+  if (!Array.isArray(orders) || orders.length === 0) return res.json({ success: true, message: 'No orders to sync' });
+
+  try {
+    for (const orderData of orders) {
+      const { items, total, customerName, date, isEvent } = orderData;
+      
+      // Deduct correct stock for each item based on isEvent mode
+      for (const item of items) {
+        const product = await prisma.product.findUnique({ where: { id: item.productId } });
+        if (!product) continue;
+        
+        let updatedSizesStr = product.sizes;
+        if (product.sizes && item.size) {
+          try {
+            let sizesObj = JSON.parse(product.sizes);
+            if (Array.isArray(sizesObj)) {
+              sizesObj = sizesObj.map(s => {
+                const sName = typeof s === 'string' ? s : (s.name || s.size);
+                if (sName === item.size) {
+                  if (typeof s === 'object') {
+                    const curStk = typeof s.stock === 'number' ? s.stock : parseInt(s.stock || 0);
+                    return { ...s, stock: Math.max(0, curStk - parseInt(item.quantity)) };
+                  }
+                }
+                return s;
+              });
+              updatedSizesStr = JSON.stringify(sizesObj);
+            }
+          } catch (e) {
+            console.error('Error updating size stock in offline-sync:', e);
+          }
+        }
+
+        const updatedStock = isEvent ? product.stock : Math.max(0, product.stock - parseInt(item.quantity));
+        const updatedEventStock = isEvent ? Math.max(0, product.eventStock - parseInt(item.quantity)) : product.eventStock;
+
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            stock: updatedStock,
+            eventStock: updatedEventStock,
+            sold: (product.sold || 0) + parseInt(item.quantity),
+            sizes: updatedSizesStr
+          }
+        });
+      }
+
+      // Create Order in DB (Marked as Paid/Completed because it's offline POS)
+      await prisma.order.create({
+        data: {
+          id: 'POS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          customerName: customerName || 'Offline Customer',
+          source: 'Offline POS',
+          status: 'Completed',
+          paymentMethod: 'Static QRIS / Cash',
+          subtotal: total,
+          tax: 0,
+          total: total,
+          date: date ? new Date(date) : new Date(),
+          items: {
+            create: items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              size: item.size || null
+            }))
+          }
+        }
+      });
+    }
+
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
+
+    res.json({ success: true, message: 'Offline orders synced successfully' });
+  } catch (error) {
+    console.error('Offline sync error:', error);
+    res.status(500).json({ error: 'Failed to sync offline orders' });
   }
 });
 

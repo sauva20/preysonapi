@@ -36,8 +36,10 @@ model Product {
   name           String
   sku            String     @unique
   price          Float
+  eventPrice     Float      @default(0)
   image          String
   stock          Int        @default(0)
+  eventStock     Int        @default(0)
   sold           Int        @default(0)
   isSoldOut      Boolean    @default(false)
   description    String     @db.Text
