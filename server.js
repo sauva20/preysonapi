@@ -11,7 +11,6 @@ const midtransClient = require('midtrans-client');
 const axios = require('axios');
 const http = require('http');
 const { Server } = require('socket.io');
-
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'preyson_jwt_secret_key_2026';
@@ -1175,16 +1174,77 @@ app.post('/api/auth/send-otp', async (req, res) => {
       verified: false
     });
 
-    console.log(`[AUTH OTP SENT] Email: ${cleanEmail} | OTP Code: ${otpCode}`);
+    // Send Real Email using Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: 'mail.preysonmoto.com', 
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      auth: {
+        user: 'company@preysonmoto.com',
+        pass: 'Subang70!'
+      }
+    });
+
+    const mailOptions = {
+      from: '"PREYSON MOTO COMPANY" <company@preysonmoto.com>',
+      to: cleanEmail,
+      subject: 'Preyson Moto - Verification Code (OTP)',
+      html: `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #111111; color: #ffffff; padding: 0;">
+          
+          <!-- Header -->
+          <div style="background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #333;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
+              PREYSON<span style="color: #c66a2b;">MOTO</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 12px; letter-spacing: 1px;">THE BEST RIDING GEAR</p>
+          </div>
+          
+          <!-- Body -->
+          <div style="padding: 40px 30px; background-color: #1a1a1a;">
+            <h2 style="margin-top: 0; font-size: 20px; color: #ffffff;">SECURITY VERIFICATION</h2>
+            <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+              Ride safe! You are receiving this email because there was a request to reset your password or verify your account at Preyson Moto Company.
+            </p>
+            
+            <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+              Please use the following 6-digit One-Time Password (OTP) to complete your verification process:
+            </p>
+
+            <div style="margin: 35px 0; padding: 20px; background-color: #000000; border-left: 4px solid #c66a2b; text-align: center; border-radius: 4px;">
+              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #c66a2b;">
+                ${otpCode}
+              </span>
+            </div>
+
+            <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+              * This code is only valid for <strong>10 minutes</strong>.<br>
+              * Do not share this code with anyone, including Preyson Moto staff.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #000000; padding: 25px; text-align: center; border-top: 1px solid #333;">
+            <p style="margin: 0; color: #666; font-size: 12px;">
+              &copy; ${new Date().getFullYear()} Preyson Moto Company. All rights reserved.<br>
+              <a href="https://preysonmoto.com" style="color: #c66a2b; text-decoration: none;">www.preysonmoto.com</a>
+            </p>
+          </div>
+          
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[AUTH OTP SENT REAL] Email: ${cleanEmail} | OTP Code: ${otpCode}`);
 
     res.json({
       success: true,
-      message: `OTP Code sent to ${cleanEmail}`,
-      otp: otpCode
+      message: `OTP Code sent to ${cleanEmail}`
     });
   } catch (error) {
     console.error("Send OTP Error:", error);
-    res.status(500).json({ error: 'Failed to send OTP code' });
+    res.status(500).json({ error: 'Failed to send OTP code to email' });
   }
 });
 
