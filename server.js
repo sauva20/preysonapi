@@ -38,6 +38,15 @@ app.set('io', io);
 const prisma = new PrismaClient();
 
 app.use(cors());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 app.use(express.json());
 
 // Ensure uploads directory exists
@@ -1321,6 +1330,86 @@ app.delete('/api/activities', (req, res) => {
     console.error('Error clearing activities:', error);
     res.status(500).json({ error: 'Failed to clear activities' });
   }
+});
+
+// ==========================
+// CAMPAIGNS, CATEGORIES & STAFF API
+// ==========================
+app.get('/api/campaigns', async (req, res) => {
+  try {
+    const campaigns = await prisma.campaign.findMany();
+    res.json(campaigns);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
+app.post('/api/campaigns', async (req, res) => {
+  try {
+    const { code, discountPct, startDate, endDate } = req.body;
+    const campaign = await prisma.campaign.create({
+      data: {
+        code,
+        discountPct: parseFloat(discountPct),
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    });
+    res.json(campaign);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create campaign' });
+  }
+});
+
+app.delete('/api/campaigns/:id', async (req, res) => {
+  try {
+    await prisma.campaign.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete campaign' });
+  }
+});
+
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await prisma.category.findMany();
+    res.json(categories);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const category = await prisma.category.create({ data: { name } });
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+  try {
+    await prisma.category.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete category' });
+  }
+});
+
+app.get('/api/staff', async (req, res) => {
+  try {
+    const staff = await prisma.user.findMany({ where: { role: 'staff' } });
+    res.json(staff);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
+// Catch-All JSON 404 Handler for /api/* (Prevents 307 Redirects on missing endpoints)
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
 });
 
 const PORT = process.env.PORT || 5000;
