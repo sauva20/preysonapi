@@ -121,11 +121,20 @@ const safeParse = (str, fallback) => {
 // Helper to format upload URLs dynamically based on current server environment
 const formatImageUrl = (url, req) => {
   if (!url || typeof url !== 'string') return url;
+  
+  const baseUrl = process.env.BASE_URL || (req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:5000');
+
+  // If it already includes /uploads/, extract the filename and rebuild with current host
   if (url.includes('/uploads/')) {
     const filename = url.split('/uploads/').pop();
-    const baseUrl = process.env.BASE_URL || (req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:5000');
     return `${baseUrl}/uploads/${filename}`;
   }
+  
+  // If it's just a raw filename (e.g. 1784970017419.JPG) without any slashes or http prefix
+  if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('/')) {
+    return `${baseUrl}/uploads/${url}`;
+  }
+
   return url;
 };
 
