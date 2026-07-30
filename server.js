@@ -18,16 +18,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'preyson_jwt_secret_key_2026';
 // Global crash handlers to prevent Node process from dying on database disconnects / Hostinger timeouts
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL SERVER ERROR] Uncaught Exception:', err);
-  if (err.name === 'PrismaClientRustPanicError' || String(err).includes('timer has gone away')) {
-    process.exit(1);
-  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRITICAL SERVER ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
-  if (reason && (reason.name === 'PrismaClientRustPanicError' || String(reason).includes('timer has gone away'))) {
-    process.exit(1);
-  }
 });
 
 const app = express();
@@ -35,23 +29,30 @@ app.set('io', null);
 
 // listen will be called at the bottom
 
-const prisma = new PrismaClient().$extends({
-  query: {
-    $allModels: {
-      async $allOperations({ args, query }) {
-        try {
-          return await query(args);
-        } catch (error) {
-          if (error.name === 'PrismaClientRustPanicError' || String(error).includes('timer has gone away')) {
-            console.error("[PRISMA EXTENSION] FATAL: Prisma Engine Panic detected during database query. Restarting server to recover...");
-            process.exit(1);
+let prisma;
+
+function createPrismaClient() {
+  return new PrismaClient().$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ args, query }) {
+          try {
+            return await query(args);
+          } catch (error) {
+            if (error && (error.name === 'PrismaClientRustPanicError' || String(error).includes('timer has gone away'))) {
+              console.error("[PRISMA RECOVERY] FATAL: Prisma Engine Panic detected. Re-initializing Prisma Client without killing Node...");
+              prisma = createPrismaClient(); // Replace the global instance
+              throw new Error("Sistem database sedang bangun dari mode hibernasi. Koneksi berhasil dipulihkan, silakan refresh/ulangi kembali.");
+            }
+            throw error;
           }
-          throw error;
         }
       }
     }
-  }
-});
+  });
+}
+
+prisma = createPrismaClient();
 
 app.use(cors({
   origin: true,
@@ -1151,11 +1152,6 @@ setInterval(async () => {
     }
   } catch (e) {
     console.error("Cron Error: Failed to expire orders", e);
-    // If Prisma Query Engine panics (non-recoverable), we MUST restart the container
-    if (e.name === 'PrismaClientRustPanicError' || String(e).includes('timer has gone away')) {
-      console.error("FATAL: Prisma Engine Panic. Restarting server to recover...");
-      process.exit(1);
-    }
   }
 }, 60 * 1000);
 
