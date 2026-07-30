@@ -35,7 +35,23 @@ app.set('io', null);
 
 // listen will be called at the bottom
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient().$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ args, query }) {
+        try {
+          return await query(args);
+        } catch (error) {
+          if (error.name === 'PrismaClientRustPanicError' || String(error).includes('timer has gone away')) {
+            console.error("[PRISMA EXTENSION] FATAL: Prisma Engine Panic detected during database query. Restarting server to recover...");
+            process.exit(1);
+          }
+          throw error;
+        }
+      }
+    }
+  }
+});
 
 app.use(cors({
   origin: true,
