@@ -64,15 +64,21 @@ app.use(cors({
 
 app.use(express.json());
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
+// Persistent Uploads Directory for Hostinger
+let UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (__dirname.includes('.builds/versions')) {
+  const rootDir = __dirname.split('.builds/versions')[0];
+  UPLOADS_DIR = path.join(rootDir, 'uploads');
+}
+
+// Ensure the directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, UPLOADS_DIR);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -80,7 +86,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Fallback: Hanya redirect jika dijalankan di localhost lokal (mencegah ERR_TOO_MANY_REDIRECTS di Hostinger)
 app.use('/uploads/:filename', (req, res, next) => {
