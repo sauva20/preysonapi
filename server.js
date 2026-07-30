@@ -18,10 +18,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'preyson_jwt_secret_key_2026';
 // Global crash handlers to prevent Node process from dying on database disconnects / Hostinger timeouts
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL SERVER ERROR] Uncaught Exception:', err);
+  if (err && (err.name === 'PrismaClientRustPanicError' || String(err).includes('timer has gone away'))) {
+    if (!isRestarting) {
+      isRestarting = true;
+      setTimeout(() => process.exit(1), 3000);
+    }
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRITICAL SERVER ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+  if (reason && (reason.name === 'PrismaClientRustPanicError' || String(reason).includes('timer has gone away'))) {
+    if (!isRestarting) {
+      isRestarting = true;
+      setTimeout(() => process.exit(1), 3000);
+    }
+  }
 });
 
 const app = express();
@@ -30,6 +42,8 @@ app.set('io', null);
 // listen will be called at the bottom
 
 let prisma;
+
+let isRestarting = false;
 
 function createPrismaClient() {
   return new PrismaClient().$extends({
@@ -40,9 +54,14 @@ function createPrismaClient() {
             return await query(args);
           } catch (error) {
             if (error && (error.name === 'PrismaClientRustPanicError' || String(error).includes('timer has gone away'))) {
-              console.error("[PRISMA RECOVERY] FATAL: Prisma Engine Panic detected. Re-initializing Prisma Client without killing Node...");
-              prisma = createPrismaClient(); // Replace the global instance
-              throw new Error("Sistem database sedang bangun dari mode hibernasi. Koneksi berhasil dipulihkan, silakan refresh/ulangi kembali.");
+              if (!isRestarting) {
+                isRestarting = true;
+                console.error("[PRISMA FATAL] Engine Panic detected! Initiating graceful restart in 3 seconds to avoid Hostinger 503 loop...");
+                setTimeout(() => {
+                  process.exit(1);
+                }, 3000);
+              }
+              throw new Error("Sistem sedang melakukan pemulihan dari mode hibernasi. Mohon tunggu 5 detik dan ulangi kembali.");
             }
             throw error;
           }
