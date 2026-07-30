@@ -18,10 +18,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'preyson_jwt_secret_key_2026';
 // Global crash handlers to prevent Node process from dying on database disconnects / Hostinger timeouts
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL SERVER ERROR] Uncaught Exception:', err);
+  if (err.name === 'PrismaClientRustPanicError' || String(err).includes('timer has gone away')) {
+    process.exit(1);
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRITICAL SERVER ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+  if (reason && (reason.name === 'PrismaClientRustPanicError' || String(reason).includes('timer has gone away'))) {
+    process.exit(1);
+  }
 });
 
 const app = express();
@@ -1129,6 +1135,11 @@ setInterval(async () => {
     }
   } catch (e) {
     console.error("Cron Error: Failed to expire orders", e);
+    // If Prisma Query Engine panics (non-recoverable), we MUST restart the container
+    if (e.name === 'PrismaClientRustPanicError' || String(e).includes('timer has gone away')) {
+      console.error("FATAL: Prisma Engine Panic. Restarting server to recover...");
+      process.exit(1);
+    }
   }
 }, 60 * 1000);
 
