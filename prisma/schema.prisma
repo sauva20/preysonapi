@@ -15,6 +15,9 @@ model User {
   password  String
   role      String   @default("customer")
   status    String   @default("ACTIVE")
+  phone     String?
+  address   String?  @db.Text
+  city      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]

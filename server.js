@@ -543,6 +543,37 @@ app.get('/api/customers', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/customers/:id', async (req, res) => {
+  try {
+    const { name, email, phone, address, city, status } = req.body;
+    const updatedCustomer = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { name, email, phone, address, city, status }
+    });
+    res.json(updatedCustomer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/customers/:id', async (req, res) => {
+  try {
+    // Delete all orders linked to this customer first to avoid foreign key constraints
+    await prisma.orderItem.deleteMany({
+      where: { order: { customerId: parseInt(req.params.id) } }
+    });
+    await prisma.order.deleteMany({
+      where: { customerId: parseInt(req.params.id) }
+    });
+    await prisma.user.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==========================
 // CAMPAIGNS API
 // ==========================
@@ -569,6 +600,16 @@ app.delete('/api/campaigns/:id', async (req, res) => {
   try {
     await prisma.campaign.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/campaigns/:id/status', async (req, res) => {
+  try {
+    const campaign = await prisma.campaign.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: req.body.status }
+    });
+    res.json(campaign);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1171,6 +1212,70 @@ app.post('/api/orders/:id/cancel', async (req, res) => {
   }
 });
 
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Restore stock if the order wasn't already expired/cancelled
+    if (order.status !== 'Expired' && order.status !== 'Cancelled') {
+      for (const item of order.items) {
+        const product = await prisma.product.findUnique({ where: { id: item.productId } });
+        if (!product) continue;
+        
+        let sizesObj = [];
+        try { sizesObj = JSON.parse(product.sizes); } catch (e) {}
+        
+        let newSizes = [...sizesObj];
+        if (item.size) {
+          const sizeIdx = newSizes.findIndex(s => (typeof s === 'string' ? s : s.name) === item.size);
+          if (sizeIdx > -1 && typeof newSizes[sizeIdx] !== 'string') {
+            newSizes[sizeIdx].stock += item.quantity;
+          }
+        }
+
+        // If it was completed/shipped, we also need to decrease the 'sold' count
+        const wasCompleted = order.status === 'Completed' || order.status === 'Shipped';
+        const newSold = Math.max(0, (product.sold || 0) - (wasCompleted ? item.quantity : 0));
+
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            stock: product.stock + item.quantity,
+            sold: newSold,
+            sizes: JSON.stringify(newSizes)
+          }
+        });
+      }
+    }
+
+    // Delete Order Items first due to foreign key
+    await prisma.orderItem.deleteMany({
+      where: { orderId: orderId }
+    });
+
+    // Delete Order
+    await prisma.order.delete({
+      where: { id: orderId }
+    });
+
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
+
+    res.json({ success: true, message: 'Order permanently deleted and stock restored' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
 // Background cron: Check for expired orders every 1 minute
 setInterval(async () => {
   try {
@@ -1374,6 +1479,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const cleanEmail = email.trim().toLowerCase();
+    
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!user) {
+      return res.status(404).json({ error: 'Email address not registered in our system.' });
+    }
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
