@@ -46,9 +46,9 @@ model Product {
   sold           Int        @default(0)
   isSoldOut      Boolean    @default(false)
   description    String     @db.Text
-  sizes          String     // stored as JSON string
+  sizes          String     @db.Text // stored as JSON string
   sizeGuide      String?    @db.Text // stored as JSON string
-  thumbnails     String     // stored as JSON string
+  thumbnails     String     @db.Text // stored as JSON string
   features       String     @db.Text
   materials      String     @db.Text
   washing        String     @db.Text
