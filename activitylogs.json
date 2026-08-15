@@ -1,0 +1,92 @@
+[
+  {
+    "id": "act-1785264996801-623d",
+    "timestamp": "2026-07-28T18:56:36.784Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (CASH)",
+    "description": "Pembayaran CASH atas 1 jenis item senilai Rp 400.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264986317-6jhx",
+    "timestamp": "2026-07-28T18:56:26.301Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (CASH)",
+    "description": "Pembayaran CASH atas 1 jenis item senilai Rp 400.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264972531-kh1w",
+    "timestamp": "2026-07-28T18:56:12.514Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (CASH)",
+    "description": "Pembayaran CASH atas 1 jenis item senilai Rp 315.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264941089-6g1g",
+    "timestamp": "2026-07-28T18:55:41.081Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (CASH)",
+    "description": "Pembayaran CASH atas 1 jenis item senilai Rp 500.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264736794-z7bl",
+    "timestamp": "2026-07-28T18:52:16.786Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (CASH)",
+    "description": "Pembayaran CASH atas 1 jenis item senilai Rp 500.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264485834-h0dd",
+    "timestamp": "2026-07-28T18:48:05.829Z",
+    "category": "POS",
+    "title": "Transaksi POS Berhasil (QRIS)",
+    "description": "Pembayaran QRIS atas 1 jenis item senilai Rp 500.000 diproses.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1785264440682-0xtn",
+    "timestamp": "2026-07-28T18:47:20.676Z",
+    "category": "Produk",
+    "title": "Pembaruan Produk",
+    "description": "Memperbarui detail produk \"usa cap\" (SKU: CAP-USA-8541, Total Stok: 25 pcs)",
+    "user": "Admin Preyson",
+    "status": "info"
+  },
+  {
+    "id": "act-1785264400109-24fm",
+    "timestamp": "2026-07-28T18:46:40.099Z",
+    "category": "Produk",
+    "title": "Pembaruan Produk",
+    "description": "Memperbarui detail produk \"classic build yellow Half cut\" (SKU: GLO-CLA-5005, Total Stok: 30 pcs)",
+    "user": "Admin Preyson",
+    "status": "info"
+  },
+  {
+    "id": "act-1785264074805-n2y0",
+    "timestamp": "2026-07-28T18:41:14.798Z",
+    "category": "Produk",
+    "title": "Pembaruan Produk",
+    "description": "Memperbarui detail produk \"classic build yellow Half cut\" (SKU: GLO-CLA-5005, Total Stok: 30 pcs)",
+    "user": "Admin Preyson",
+    "status": "info"
+  },
+  {
+    "id": "act-1785264052767-dj47",
+    "timestamp": "2026-07-28T18:40:52.759Z",
+    "category": "Produk",
+    "title": "Pembaruan Produk",
+    "description": "Memperbarui detail produk \"classic build yellow Half cut\" (SKU: GLO-CLA-5005, Total Stok: 30 pcs)",
+    "user": "Admin Preyson",
+    "status": "info"
+  }
+]

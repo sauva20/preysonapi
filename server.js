@@ -918,14 +918,6 @@ app.post('/api/checkout/process', async (req, res) => {
     const _io = app.get('io');
     if (_io) _io.emit('stock_updated');
 
-    const serverKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_server_key' }});
-    const clientKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_client_key' }});
-    const isProdSetting = await prisma.setting.findUnique({ where: { key: 'midtrans_is_production' }});
-    
-    const isProduction = isProdSetting ? isProdSetting.value === 'true' : false;
-    const serverKey = serverKeySetting ? serverKeySetting.value : '';
-    const clientKey = clientKeySetting ? clientKeySetting.value : '';
-
     const customOrderId = 'PRY-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
@@ -935,7 +927,7 @@ app.post('/api/checkout/process', async (req, res) => {
         customerName, customerEmail, customerPhone, customerId,
         shippingAddress, shippingCity, shippingProvince, shippingPostal: String(shippingPostal), shippingCourier, shippingCost,
         discount, voucherCode, subtotal, tax, total,
-        paymentMethod: 'Midtrans',
+        paymentMethod: 'QRIS',
         expiresAt,
         items: {
           create: items.map(item => ({
@@ -948,38 +940,54 @@ app.post('/api/checkout/process', async (req, res) => {
       }
     });
 
-    if (serverKey && serverKey !== 'dummy_server_key') {
-      const snap = new midtransClient.Snap({
-        isProduction,
-        serverKey,
-        clientKey
-      });
-      const parameter = {
-        transaction_details: {
-          order_id: order.id,
-          gross_amount: Math.round(total)
-        },
-        customer_details: {
-          first_name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        }
-      };
-      
-      const transaction = await snap.createTransaction(parameter);
-      
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { midtransToken: transaction.token }
-      });
-      
-      res.json({ orderId: order.id, token: transaction.token });
-    } else {
-      res.json({ orderId: order.id, token: 'dummy_token' });
-    }
+    res.json({ orderId: order.id, token: 'dummy_token' });
   } catch (error) {
     console.error('Checkout error:', error);
     res.status(500).json({ error: 'Failed to process checkout' });
+  }
+});
+
+// Notify Admin via Fonnte
+app.post('/api/orders/:id/notify-admin', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true }
+    });
+
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    await prisma.order.update({
+      where: { id },
+      data: { status: 'menunggu verifikasi pembayaran' }
+    });
+
+    const tokenSetting = await prisma.setting.findUnique({ where: { key: 'fonnte_token' }});
+    const waSetting = await prisma.setting.findUnique({ where: { key: 'admin_wa_number' }});
+
+    if (tokenSetting && tokenSetting.value && waSetting && waSetting.value) {
+      const axios = require('axios');
+      const message = `pembayran masuk mohon cek pembayaran kode pesanan ${order.id} dan harganya Rp ${order.total.toLocaleString('id-ID')}`;
+      
+      try {
+        await axios.post('https://api.fonnte.com/send', {
+          target: waSetting.value,
+          message: message
+        }, {
+          headers: {
+            'Authorization': tokenSetting.value
+          }
+        });
+      } catch (waErr) {
+        console.error('Fonnte send error:', waErr.response?.data || waErr.message);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Notify Admin Error:', err);
+    res.status(500).json({ error: 'Failed to notify admin' });
   }
 });
 
