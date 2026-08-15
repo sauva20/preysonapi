@@ -87,10 +87,10 @@ app.use(express.json());
 let UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (__dirname.includes('.builds/versions')) {
   const rootDir = __dirname.split('.builds/versions')[0];
-  UPLOADS_DIR = path.join(rootDir, 'nodejs', 'uploads');
+  UPLOADS_DIR = path.join(rootDir, 'public_html', 'uploads');
 } else if (__dirname.includes('hbuilds/versions')) {
   const rootDir = __dirname.split('hbuilds/versions')[0];
-  UPLOADS_DIR = path.join(rootDir, 'nodejs', 'uploads');
+  UPLOADS_DIR = path.join(rootDir, 'public_html', 'uploads');
 }
 
 // Ensure the directory exists
