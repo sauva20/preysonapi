@@ -108,10 +108,30 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use('/uploads', express.static(UPLOADS_DIR));
-
-// Fallback: Hanya redirect jika dijalankan di localhost lokal (mencegah ERR_TOO_MANY_REDIRECTS di Hostinger)
-app.use('/uploads/:filename', (req, res, next) => {
+app.get('/uploads/:filename', (req, res) => {
+  const filePath = path.join(UPLOADS_DIR, req.params.filename);
+  if (fs.existsSync(filePath)) {
+    try {
+      const ext = path.extname(req.params.filename).toLowerCase();
+      let contentType = 'image/jpeg';
+      if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.webp') contentType = 'image/webp';
+      else if (ext === '.gif') contentType = 'image/gif';
+      else if (ext === '.svg') contentType = 'image/svg+xml';
+      
+      const fileBuffer = fs.readFileSync(filePath);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', fileBuffer.length);
+      // Disable cache initially to ensure it works, Hostinger caches aggressively anyway
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(fileBuffer);
+    } catch (err) {
+      console.error('Error serving file:', err);
+      // Fall through to 404
+    }
+  }
+  
+  // Fallback: Redirect jika di localhost (mencegah ERR_TOO_MANY_REDIRECTS)
   const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
   if (isLocal) {
     const remoteUrl = `https://api.preysonmoto.com/uploads/${req.params.filename}`;
