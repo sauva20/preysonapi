@@ -84,19 +84,35 @@ app.use(cors({
 app.use(express.json());
 
 // Persistent Uploads Directory for Hostinger
-let UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (__dirname.includes('.builds/versions')) {
-  const rootDir = __dirname.split('.builds/versions')[0];
-  UPLOADS_DIR = path.join(rootDir, 'public_html', 'uploads');
-} else if (__dirname.includes('hbuilds/versions')) {
-  const rootDir = __dirname.split('hbuilds/versions')[0];
-  UPLOADS_DIR = path.join(rootDir, 'public_html', 'uploads');
+const localUploads = path.join(__dirname, 'uploads');
+let persistentDir = localUploads;
+
+if (__dirname.includes('.builds/versions') || __dirname.includes('hbuilds/versions')) {
+  const rootDir = __dirname.split(/.builds\/versions|hbuilds\/versions/)[0];
+  persistentDir = path.join(rootDir, 'nodejs', 'uploads');
+  
+  if (!fs.existsSync(persistentDir)) {
+    fs.mkdirSync(persistentDir, { recursive: true });
+  }
+
+  // Create symlink from local to persistent so NGINX/LiteSpeed can find it
+  try {
+    if (fs.existsSync(localUploads) && !fs.lstatSync(localUploads).isSymbolicLink()) {
+      fs.rmSync(localUploads, { recursive: true, force: true });
+    }
+    if (!fs.existsSync(localUploads)) {
+      fs.symlinkSync(persistentDir, localUploads, 'dir');
+    }
+  } catch (err) {
+    console.error("Symlink creation failed:", err);
+  }
+} else {
+  if (!fs.existsSync(localUploads)) {
+    fs.mkdirSync(localUploads, { recursive: true });
+  }
 }
 
-// Ensure the directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+let UPLOADS_DIR = persistentDir;
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -108,30 +124,10 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.get('/uploads/:filename', (req, res) => {
-  const filePath = path.join(UPLOADS_DIR, req.params.filename);
-  if (fs.existsSync(filePath)) {
-    try {
-      const ext = path.extname(req.params.filename).toLowerCase();
-      let contentType = 'image/jpeg';
-      if (ext === '.png') contentType = 'image/png';
-      else if (ext === '.webp') contentType = 'image/webp';
-      else if (ext === '.gif') contentType = 'image/gif';
-      else if (ext === '.svg') contentType = 'image/svg+xml';
-      
-      const fileBuffer = fs.readFileSync(filePath);
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', fileBuffer.length);
-      // Disable cache initially to ensure it works, Hostinger caches aggressively anyway
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.send(fileBuffer);
-    } catch (err) {
-      console.error('Error serving file:', err);
-      // Fall through to 404
-    }
-  }
-  
-  // Fallback: Redirect jika di localhost (mencegah ERR_TOO_MANY_REDIRECTS)
+app.use('/uploads', express.static(localUploads));
+
+// Fallback: Redirect jika di localhost (mencegah ERR_TOO_MANY_REDIRECTS)
+app.use('/uploads/:filename', (req, res, next) => {
   const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
   if (isLocal) {
     const remoteUrl = `https://api.preysonmoto.com/uploads/${req.params.filename}`;
