@@ -387,7 +387,7 @@ const nodemailer = require('nodemailer');
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customerId, customerName, customerEmail, items, paymentMethod, subtotal, tax, total, source, isEvent } = req.body;
+    const { customerId, customerName, customerEmail, items, paymentMethod, subtotal, tax, total, source, status, isEvent } = req.body;
     
     let finalCustomerId = customerId ? parseInt(customerId) : null;
     
@@ -412,7 +412,9 @@ app.post('/api/orders', async (req, res) => {
       const newOrder = await tx.order.create({
         data: {
           customerId: finalCustomerId,
+          customerName: customerName || null,
           source: source || 'POS',
+          status: status || 'Pending',
           paymentMethod: paymentMethod || 'Cash', 
           subtotal: parseFloat(subtotal), 
           tax: parseFloat(tax), 
