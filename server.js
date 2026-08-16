@@ -1298,7 +1298,8 @@ app.get('/api/orders/:id/payment-status', async (req, res) => {
     res.json({
       status: order.status,
       midtransToken: order.midtransToken,
-      expiresAt: order.expiresAt
+      expiresAt: order.expiresAt,
+      total: order.total
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
