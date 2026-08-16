@@ -838,7 +838,6 @@ app.post('/api/checkout/shipping-rates', async (req, res) => {
     
     // We prioritize area_id if provided, otherwise fallback to postal_code
     const payload = {
-      couriers: "jne,sicepat,jnt,anteraja,tiki,pos,ninja,lion,idexpress,gosend,grab",
       items: [
         {
           name: "Apparel",
@@ -1339,11 +1338,18 @@ app.post('/api/orders/:id/ship', async (req, res) => {
     const postalSetting = await prisma.setting.findUnique({ where: { key: 'store_postal_code' }});
     const originPostal = postalSetting ? postalSetting.value : '40115';
 
+    const addressSetting = await prisma.setting.findUnique({ where: { key: 'store_address' }});
+    const originAddress = addressSetting ? addressSetting.value : 'Preyson Moto Company Store';
+    const phoneSetting = await prisma.setting.findUnique({ where: { key: 'store_phone' }});
+    const originPhone = phoneSetting ? phoneSetting.value : '081234567890';
+    const nameSetting = await prisma.setting.findUnique({ where: { key: 'store_name' }});
+    const originName = nameSetting ? nameSetting.value : 'Preyson Admin';
+
     // Call Biteship Create Order API
     const payload = {
-      origin_contact_name: "Preyson Admin",
-      origin_contact_phone: "081234567890",
-      origin_address: "Preyson Moto Company Store",
+      origin_contact_name: originName,
+      origin_contact_phone: originPhone,
+      origin_address: originAddress,
       origin_postal_code: parseInt(originPostal),
       destination_contact_name: order.customerName,
       destination_contact_phone: order.customerPhone,
