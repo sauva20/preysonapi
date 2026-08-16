@@ -1381,6 +1381,55 @@ app.post('/api/orders/:id/ship', async (req, res) => {
 });
 
 // ==========================
+// BITESHIP WEBHOOK
+// ==========================
+app.post('/api/biteship/webhook', async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log("Biteship Webhook Received:", JSON.stringify(payload));
+    
+    // Asumsikan event tracking.status atau order.status
+    const waybill = payload.waybill_id || (payload.courier && payload.courier.waybill_id);
+    const biteshipOrderId = payload.order_id || payload.id;
+    const biteshipStatus = payload.status; // 'allocated', 'picking_up', 'picked', 'dropping_off', 'delivered', 'cancelled' dll.
+
+    if (biteshipStatus && (waybill || biteshipOrderId)) {
+      // Mapping status Biteship ke status toko kita
+      let newStatus = null;
+      if (['allocated', 'picking_up'].includes(biteshipStatus)) newStatus = 'Siap Dikirim';
+      if (['picked', 'dropping_off'].includes(biteshipStatus)) newStatus = 'Dikirim';
+      if (['delivered'].includes(biteshipStatus)) newStatus = 'Selesai';
+      if (['cancelled', 'rejected', 'returned', 'disposed'].includes(biteshipStatus)) newStatus = 'Cancelled';
+
+      if (newStatus) {
+        // Cari order berdasarkan trackingCode atau biteshipOrderId
+        const order = await prisma.order.findFirst({
+          where: {
+            OR: [
+              { trackingCode: waybill },
+              { biteshipOrderId: biteshipOrderId }
+            ]
+          }
+        });
+
+        if (order && order.status !== newStatus) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { status: newStatus }
+          });
+          console.log(`Order ${order.id} status auto-updated to ${newStatus} via Webhook`);
+        }
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error("Webhook Error:", error);
+    res.status(500).send('Error');
+  }
+});
+
+// ==========================
 // BITESHIP REAL-TIME TRACKING API
 // ==========================
 app.get('/api/tracking/:waybill', async (req, res) => {
