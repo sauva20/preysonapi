@@ -836,8 +836,12 @@ app.post('/api/checkout/shipping-rates', async (req, res) => {
     const originPostal = postalSetting ? postalSetting.value : '40115';
     const originAreaId = areaSetting ? areaSetting.value : null;
     
+    const couriersSetting = await prisma.setting.findUnique({ where: { key: 'store_couriers' }});
+    const activeCouriers = couriersSetting ? couriersSetting.value : 'jne,grab,gosend';
+
     // We prioritize area_id if provided, otherwise fallback to postal_code
     const payload = {
+      couriers: activeCouriers,
       items: [
         {
           name: "Apparel",
