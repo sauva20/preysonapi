@@ -964,6 +964,67 @@ app.post('/api/checkout/process', async (req, res) => {
       }
     });
 
+    if (customerEmail) {
+      try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.hostinger.com', 
+          port: 465,
+          secure: true,
+          auth: {
+            user: 'company@preysonmoto.com',
+            pass: 'Subang70!'
+          }
+        });
+
+        const mailOptions = {
+          from: '"PREYSON MOTO COMPANY" <company@preysonmoto.com>',
+          to: customerEmail,
+          subject: `Preyson Moto - Order Invoice #${order.id}`,
+          html: `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #111111; color: #ffffff; padding: 0;">
+              <div style="background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #333;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
+                  PREYSON<span style="color: #c66a2b;">MOTO</span>
+                </h1>
+                <p style="margin: 5px 0 0 0; color: #888; font-size: 12px; letter-spacing: 1px;">THE BEST RIDING GEAR</p>
+              </div>
+              <div style="padding: 40px 30px; background-color: #1a1a1a;">
+                <h2 style="margin-top: 0; font-size: 20px; color: #ffffff;">Order Invoice</h2>
+                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                  Hi ${customerName || 'Customer'},
+                </p>
+                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                  Terima kasih telah berbelanja di Preyson Moto. Berikut adalah Kode Pesanan (Order ID) Anda:
+                </p>
+                <div style="margin: 35px 0; padding: 20px; background-color: #000000; border-left: 4px solid #c66a2b; text-align: center; border-radius: 4px;">
+                  <span style="font-size: 16px; font-weight: 800; letter-spacing: 2px; color: #c66a2b;">
+                    ${order.id}
+                  </span>
+                </div>
+                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+                  Total Harga: Rp ${order.total.toLocaleString('id-ID')}
+                </p>
+                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+                  Gunakan Kode Pesanan di atas pada halaman Lacak Pesanan (Track Order) untuk memantau pengiriman barang Anda.
+                </p>
+              </div>
+              <div style="background-color: #000000; padding: 25px; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; color: #666; font-size: 12px;">
+                  &copy; ${new Date().getFullYear()} Preyson Moto Company. All rights reserved.<br>
+                  <a href="https://preysonmoto.com" style="color: #c66a2b; text-decoration: none;">www.preysonmoto.com</a>
+                </p>
+              </div>
+            </div>
+          `
+        };
+
+        await transporter.sendMail(mailOptions);
+      } catch (emailErr) {
+        console.error('Failed to send order email:', emailErr);
+      }
+    }
+
     res.json({ orderId: order.id, token: 'dummy_token' });
   } catch (error) {
     console.error('Checkout error:', error);
@@ -1005,6 +1066,68 @@ app.post('/api/orders/:id/notify-admin', async (req, res) => {
         });
       } catch (waErr) {
         console.error('Fonnte send error:', waErr.response?.data || waErr.message);
+      }
+    }
+
+    if (order.customerEmail) {
+      try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.hostinger.com', 
+          port: 465,
+          secure: true,
+          auth: {
+            user: 'company@preysonmoto.com',
+            pass: 'Subang70!'
+          }
+        });
+
+        const mailOptions = {
+          from: '"PREYSON MOTO COMPANY" <company@preysonmoto.com>',
+          to: order.customerEmail,
+          subject: `Preyson Moto - Order Invoice #${order.id}`,
+          html: `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #111111; color: #ffffff; padding: 0;">
+              <div style="background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #333;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
+                  PREYSON<span style="color: #c66a2b;">MOTO</span>
+                </h1>
+                <p style="margin: 5px 0 0 0; color: #888; font-size: 12px; letter-spacing: 1px;">THE BEST RIDING GEAR</p>
+              </div>
+              <div style="padding: 40px 30px; background-color: #1a1a1a;">
+                <h2 style="margin-top: 0; font-size: 20px; color: #ffffff;">Order Invoice</h2>
+                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                  Hi ${order.customerName || 'Customer'},
+                </p>
+                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                  Terima kasih telah berbelanja di Preyson Moto. Berikut adalah Kode Pesanan (Order ID) Anda:
+                </p>
+                <div style="margin: 35px 0; padding: 20px; background-color: #000000; border-left: 4px solid #c66a2b; text-align: center; border-radius: 4px;">
+                  <span style="font-size: 16px; font-weight: 800; letter-spacing: 2px; color: #c66a2b;">
+                    ${order.id}
+                  </span>
+                </div>
+                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+                  Total Harga: Rp ${order.total.toLocaleString('id-ID')}
+                </p>
+                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+                  Gunakan Kode Pesanan di atas pada halaman Lacak Pesanan (Track Order) untuk memantau pengiriman barang Anda.
+                </p>
+              </div>
+              <div style="background-color: #000000; padding: 25px; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; color: #666; font-size: 12px;">
+                  &copy; ${new Date().getFullYear()} Preyson Moto Company. All rights reserved.<br>
+                  <a href="https://preysonmoto.com" style="color: #c66a2b; text-decoration: none;">www.preysonmoto.com</a>
+                </p>
+              </div>
+            </div>
+          `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[ORDER EMAIL SENT] Invoice sent to: ${order.customerEmail}`);
+      } catch (emailErr) {
+        console.error('Failed to send order email:', emailErr);
       }
     }
 
