@@ -1038,7 +1038,7 @@ app.post('/api/orders/:id/notify-admin', async (req, res) => {
   try {
     const order = await prisma.order.findUnique({
       where: { id },
-      include: { items: true }
+      include: { items: { include: { product: true } } }
     });
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -1048,87 +1048,79 @@ app.post('/api/orders/:id/notify-admin', async (req, res) => {
       data: { status: 'menunggu verifikasi pembayaran' }
     });
 
-    const tokenSetting = await prisma.setting.findUnique({ where: { key: 'fonnte_token' }});
-    const waSetting = await prisma.setting.findUnique({ where: { key: 'admin_wa_number' }});
+    const emailSetting = await prisma.setting.findUnique({ where: { key: 'store_email' }});
+    const adminEmail = emailSetting ? emailSetting.value : 'company@preysonmoto.com';
 
-    if (tokenSetting && tokenSetting.value && waSetting && waSetting.value) {
-      const axios = require('axios');
-      const message = `pembayran masuk mohon cek pembayaran kode pesanan ${order.id} dan harganya Rp ${order.total.toLocaleString('id-ID')}`;
-      
-      try {
-        await axios.post('https://api.fonnte.com/send', {
-          target: waSetting.value,
-          message: message
-        }, {
-          headers: {
-            'Authorization': tokenSetting.value
-          }
-        });
-      } catch (waErr) {
-        console.error('Fonnte send error:', waErr.response?.data || waErr.message);
-      }
-    }
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.hostinger.com', 
+        port: 465,
+        secure: true,
+        auth: {
+          user: 'company@preysonmoto.com',
+          pass: 'Subang70!'
+        }
+      });
 
-    if (order.customerEmail) {
-      try {
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.hostinger.com', 
-          port: 465,
-          secure: true,
-          auth: {
-            user: 'company@preysonmoto.com',
-            pass: 'Subang70!'
-          }
-        });
+      let itemsHtml = order.items.map(item => `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #333;">${item.product ? item.product.name : 'Product'} ${item.size ? `(Size: ${item.size})` : ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">${item.quantity}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #333; text-align: right;">Rp ${item.price.toLocaleString('id-ID')}</td>
+        </tr>
+      `).join('');
 
-        const mailOptions = {
-          from: '"PREYSON MOTO COMPANY" <company@preysonmoto.com>',
-          to: order.customerEmail,
-          subject: `Preyson Moto - Order Invoice #${order.id}`,
-          html: `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #111111; color: #ffffff; padding: 0;">
-              <div style="background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #333;">
-                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
-                  PREYSON<span style="color: #c66a2b;">MOTO</span>
-                </h1>
-                <p style="margin: 5px 0 0 0; color: #888; font-size: 12px; letter-spacing: 1px;">THE BEST RIDING GEAR</p>
-              </div>
-              <div style="padding: 40px 30px; background-color: #1a1a1a;">
-                <h2 style="margin-top: 0; font-size: 20px; color: #ffffff;">Order Invoice</h2>
-                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
-                  Hi ${order.customerName || 'Customer'},
-                </p>
-                <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
-                  Terima kasih telah berbelanja di Preyson Moto. Berikut adalah Kode Pesanan (Order ID) Anda:
-                </p>
-                <div style="margin: 35px 0; padding: 20px; background-color: #000000; border-left: 4px solid #c66a2b; text-align: center; border-radius: 4px;">
-                  <span style="font-size: 16px; font-weight: 800; letter-spacing: 2px; color: #c66a2b;">
-                    ${order.id}
-                  </span>
-                </div>
-                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
-                  Total Harga: Rp ${order.total.toLocaleString('id-ID')}
-                </p>
-                <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
-                  Gunakan Kode Pesanan di atas pada halaman Lacak Pesanan (Track Order) untuk memantau pengiriman barang Anda.
-                </p>
-              </div>
-              <div style="background-color: #000000; padding: 25px; text-align: center; border-top: 1px solid #333;">
-                <p style="margin: 0; color: #666; font-size: 12px;">
-                  &copy; ${new Date().getFullYear()} Preyson Moto Company. All rights reserved.<br>
-                  <a href="https://preysonmoto.com" style="color: #c66a2b; text-decoration: none;">www.preysonmoto.com</a>
-                </p>
-              </div>
+      const mailOptions = {
+        from: '"PREYSON MOTO COMPANY" <company@preysonmoto.com>',
+        to: adminEmail,
+        subject: `[ACTION REQUIRED] Verifikasi Pembayaran Pesanan #${order.id}`,
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #111111; color: #ffffff; padding: 0;">
+            <div style="background-color: #c66a2b; padding: 20px; text-align: center;">
+              <h2 style="margin: 0; color: #ffffff; font-size: 20px; letter-spacing: 1px;">NOTIFIKASI PEMBAYARAN</h2>
             </div>
-          `
-        };
+            <div style="padding: 40px 30px; background-color: #1a1a1a;">
+              <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                Halo Admin Preyson Moto,
+              </p>
+              <p style="color: #bbbbbb; line-height: 1.6; font-size: 15px;">
+                Seorang pembeli baru saja melakukan konfirmasi pembayaran. Berikut rinciannya:
+              </p>
+              
+              <div style="background-color: #000000; padding: 15px; border-radius: 5px; margin: 25px 0;">
+                <p style="margin: 5px 0; color: #aaa; font-size: 14px;"><strong>Kode Pesanan:</strong> <span style="color: #c66a2b;">${order.id}</span></p>
+                <p style="margin: 5px 0; color: #aaa; font-size: 14px;"><strong>Status:</strong> HARUS DIKONFIRMASI PEMBAYARAN</p>
+                <p style="margin: 5px 0; color: #aaa; font-size: 14px;"><strong>Nama Pembeli:</strong> ${order.customerName}</p>
+                <p style="margin: 5px 0; color: #aaa; font-size: 14px;"><strong>Total Harga:</strong> Rp ${order.total.toLocaleString('id-ID')}</p>
+              </div>
 
-        await transporter.sendMail(mailOptions);
-        console.log(`[ORDER EMAIL SENT] Invoice sent to: ${order.customerEmail}`);
-      } catch (emailErr) {
-        console.error('Failed to send order email:', emailErr);
-      }
+              <h3 style="color: #fff; font-size: 16px; margin-bottom: 10px;">Rincian Barang:</h3>
+              <table style="width: 100%; border-collapse: collapse; color: #bbb; font-size: 14px;">
+                <thead>
+                  <tr>
+                    <th style="padding: 10px; border-bottom: 2px solid #555; text-align: left;">Produk</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #555; text-align: center;">Qty</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #555; text-align: right;">Harga</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              
+              <p style="color: #888888; font-size: 13px; line-height: 1.5; margin-top: 30px;">
+                Silakan login ke Admin Dashboard untuk memverifikasi pembayaran dan memproses pesanan ini.
+              </p>
+            </div>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`[ADMIN NOTIFIED] Payment check notification sent to Admin Email: ${adminEmail}`);
+    } catch (emailErr) {
+      console.error('Failed to send admin notification email:', emailErr);
     }
 
     res.json({ success: true });
