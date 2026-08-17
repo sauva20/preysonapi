@@ -1,5 +1,14 @@
 [
   {
+    "id": "act-1786944222039-4tnv",
+    "timestamp": "2026-08-17T05:23:42.001Z",
+    "category": "Promo",
+    "title": "Diskon Baru Dibuat",
+    "description": "Program diskon \"Merdeka!!\" berhasil ditambahkan.",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
     "id": "act-1785264996801-623d",
     "timestamp": "2026-07-28T18:56:36.784Z",
     "category": "POS",
