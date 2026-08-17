@@ -130,3 +130,16 @@ model Setting {
 
   @@map("setting")
 }
+
+model ProductDiscount {
+  id         Int      @id @default(autoincrement())
+  name       String
+  type       String   @default("percentage")
+  value      Float
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean  @default(true)
+  productIds String   @db.Text
+
+  @@map("product_discount")
+}

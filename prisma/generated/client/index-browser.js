@@ -216,6 +216,17 @@ exports.Prisma.SettingScalarFieldEnum = {
   value: 'value'
 };
 
+exports.Prisma.ProductDiscountScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  type: 'type',
+  value: 'value',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  isActive: 'isActive',
+  productIds: 'productIds'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -290,6 +301,12 @@ exports.Prisma.SettingOrderByRelevanceFieldEnum = {
   value: 'value'
 };
 
+exports.Prisma.ProductDiscountOrderByRelevanceFieldEnum = {
+  name: 'name',
+  type: 'type',
+  productIds: 'productIds'
+};
+
 
 exports.Prisma.ModelName = {
   User: 'User',
@@ -298,7 +315,8 @@ exports.Prisma.ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Campaign: 'Campaign',
-  Setting: 'Setting'
+  Setting: 'Setting',
+  ProductDiscount: 'ProductDiscount'
 };
 
 /**

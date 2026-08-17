@@ -48,6 +48,11 @@ export type Campaign = $Result.DefaultSelection<Prisma.$CampaignPayload>
  * 
  */
 export type Setting = $Result.DefaultSelection<Prisma.$SettingPayload>
+/**
+ * Model ProductDiscount
+ * 
+ */
+export type ProductDiscount = $Result.DefaultSelection<Prisma.$ProductDiscountPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -236,6 +241,16 @@ export class PrismaClient<
     * ```
     */
   get setting(): Prisma.SettingDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.productDiscount`: Exposes CRUD operations for the **ProductDiscount** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ProductDiscounts
+    * const productDiscounts = await prisma.productDiscount.findMany()
+    * ```
+    */
+  get productDiscount(): Prisma.ProductDiscountDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -683,7 +698,8 @@ export namespace Prisma {
     Order: 'Order',
     OrderItem: 'OrderItem',
     Campaign: 'Campaign',
-    Setting: 'Setting'
+    Setting: 'Setting',
+    ProductDiscount: 'ProductDiscount'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -702,7 +718,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "category" | "product" | "order" | "orderItem" | "campaign" | "setting"
+      modelProps: "user" | "category" | "product" | "order" | "orderItem" | "campaign" | "setting" | "productDiscount"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1168,6 +1184,72 @@ export namespace Prisma {
           }
         }
       }
+      ProductDiscount: {
+        payload: Prisma.$ProductDiscountPayload<ExtArgs>
+        fields: Prisma.ProductDiscountFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ProductDiscountFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ProductDiscountFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          findFirst: {
+            args: Prisma.ProductDiscountFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ProductDiscountFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          findMany: {
+            args: Prisma.ProductDiscountFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>[]
+          }
+          create: {
+            args: Prisma.ProductDiscountCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          createMany: {
+            args: Prisma.ProductDiscountCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.ProductDiscountDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          update: {
+            args: Prisma.ProductDiscountUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          deleteMany: {
+            args: Prisma.ProductDiscountDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ProductDiscountUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ProductDiscountUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProductDiscountPayload>
+          }
+          aggregate: {
+            args: Prisma.ProductDiscountAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateProductDiscount>
+          }
+          groupBy: {
+            args: Prisma.ProductDiscountGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ProductDiscountGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ProductDiscountCountArgs<ExtArgs>
+            result: $Utils.Optional<ProductDiscountCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1267,6 +1349,7 @@ export namespace Prisma {
     orderItem?: OrderItemOmit
     campaign?: CampaignOmit
     setting?: SettingOmit
+    productDiscount?: ProductDiscountOmit
   }
 
   /* Types for Logging */
@@ -8761,6 +8844,959 @@ export namespace Prisma {
 
 
   /**
+   * Model ProductDiscount
+   */
+
+  export type AggregateProductDiscount = {
+    _count: ProductDiscountCountAggregateOutputType | null
+    _avg: ProductDiscountAvgAggregateOutputType | null
+    _sum: ProductDiscountSumAggregateOutputType | null
+    _min: ProductDiscountMinAggregateOutputType | null
+    _max: ProductDiscountMaxAggregateOutputType | null
+  }
+
+  export type ProductDiscountAvgAggregateOutputType = {
+    id: number | null
+    value: number | null
+  }
+
+  export type ProductDiscountSumAggregateOutputType = {
+    id: number | null
+    value: number | null
+  }
+
+  export type ProductDiscountMinAggregateOutputType = {
+    id: number | null
+    name: string | null
+    type: string | null
+    value: number | null
+    startDate: Date | null
+    endDate: Date | null
+    isActive: boolean | null
+    productIds: string | null
+  }
+
+  export type ProductDiscountMaxAggregateOutputType = {
+    id: number | null
+    name: string | null
+    type: string | null
+    value: number | null
+    startDate: Date | null
+    endDate: Date | null
+    isActive: boolean | null
+    productIds: string | null
+  }
+
+  export type ProductDiscountCountAggregateOutputType = {
+    id: number
+    name: number
+    type: number
+    value: number
+    startDate: number
+    endDate: number
+    isActive: number
+    productIds: number
+    _all: number
+  }
+
+
+  export type ProductDiscountAvgAggregateInputType = {
+    id?: true
+    value?: true
+  }
+
+  export type ProductDiscountSumAggregateInputType = {
+    id?: true
+    value?: true
+  }
+
+  export type ProductDiscountMinAggregateInputType = {
+    id?: true
+    name?: true
+    type?: true
+    value?: true
+    startDate?: true
+    endDate?: true
+    isActive?: true
+    productIds?: true
+  }
+
+  export type ProductDiscountMaxAggregateInputType = {
+    id?: true
+    name?: true
+    type?: true
+    value?: true
+    startDate?: true
+    endDate?: true
+    isActive?: true
+    productIds?: true
+  }
+
+  export type ProductDiscountCountAggregateInputType = {
+    id?: true
+    name?: true
+    type?: true
+    value?: true
+    startDate?: true
+    endDate?: true
+    isActive?: true
+    productIds?: true
+    _all?: true
+  }
+
+  export type ProductDiscountAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ProductDiscount to aggregate.
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProductDiscounts to fetch.
+     */
+    orderBy?: ProductDiscountOrderByWithRelationInput | ProductDiscountOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ProductDiscountWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProductDiscounts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProductDiscounts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ProductDiscounts
+    **/
+    _count?: true | ProductDiscountCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ProductDiscountAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ProductDiscountSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ProductDiscountMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ProductDiscountMaxAggregateInputType
+  }
+
+  export type GetProductDiscountAggregateType<T extends ProductDiscountAggregateArgs> = {
+        [P in keyof T & keyof AggregateProductDiscount]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateProductDiscount[P]>
+      : GetScalarType<T[P], AggregateProductDiscount[P]>
+  }
+
+
+
+
+  export type ProductDiscountGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProductDiscountWhereInput
+    orderBy?: ProductDiscountOrderByWithAggregationInput | ProductDiscountOrderByWithAggregationInput[]
+    by: ProductDiscountScalarFieldEnum[] | ProductDiscountScalarFieldEnum
+    having?: ProductDiscountScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ProductDiscountCountAggregateInputType | true
+    _avg?: ProductDiscountAvgAggregateInputType
+    _sum?: ProductDiscountSumAggregateInputType
+    _min?: ProductDiscountMinAggregateInputType
+    _max?: ProductDiscountMaxAggregateInputType
+  }
+
+  export type ProductDiscountGroupByOutputType = {
+    id: number
+    name: string
+    type: string
+    value: number
+    startDate: Date
+    endDate: Date
+    isActive: boolean
+    productIds: string
+    _count: ProductDiscountCountAggregateOutputType | null
+    _avg: ProductDiscountAvgAggregateOutputType | null
+    _sum: ProductDiscountSumAggregateOutputType | null
+    _min: ProductDiscountMinAggregateOutputType | null
+    _max: ProductDiscountMaxAggregateOutputType | null
+  }
+
+  type GetProductDiscountGroupByPayload<T extends ProductDiscountGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ProductDiscountGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ProductDiscountGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ProductDiscountGroupByOutputType[P]>
+            : GetScalarType<T[P], ProductDiscountGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ProductDiscountSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    type?: boolean
+    value?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    isActive?: boolean
+    productIds?: boolean
+  }, ExtArgs["result"]["productDiscount"]>
+
+
+
+  export type ProductDiscountSelectScalar = {
+    id?: boolean
+    name?: boolean
+    type?: boolean
+    value?: boolean
+    startDate?: boolean
+    endDate?: boolean
+    isActive?: boolean
+    productIds?: boolean
+  }
+
+  export type ProductDiscountOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "type" | "value" | "startDate" | "endDate" | "isActive" | "productIds", ExtArgs["result"]["productDiscount"]>
+
+  export type $ProductDiscountPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ProductDiscount"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      name: string
+      type: string
+      value: number
+      startDate: Date
+      endDate: Date
+      isActive: boolean
+      productIds: string
+    }, ExtArgs["result"]["productDiscount"]>
+    composites: {}
+  }
+
+  type ProductDiscountGetPayload<S extends boolean | null | undefined | ProductDiscountDefaultArgs> = $Result.GetResult<Prisma.$ProductDiscountPayload, S>
+
+  type ProductDiscountCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ProductDiscountFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ProductDiscountCountAggregateInputType | true
+    }
+
+  export interface ProductDiscountDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ProductDiscount'], meta: { name: 'ProductDiscount' } }
+    /**
+     * Find zero or one ProductDiscount that matches the filter.
+     * @param {ProductDiscountFindUniqueArgs} args - Arguments to find a ProductDiscount
+     * @example
+     * // Get one ProductDiscount
+     * const productDiscount = await prisma.productDiscount.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ProductDiscountFindUniqueArgs>(args: SelectSubset<T, ProductDiscountFindUniqueArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ProductDiscount that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ProductDiscountFindUniqueOrThrowArgs} args - Arguments to find a ProductDiscount
+     * @example
+     * // Get one ProductDiscount
+     * const productDiscount = await prisma.productDiscount.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ProductDiscountFindUniqueOrThrowArgs>(args: SelectSubset<T, ProductDiscountFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ProductDiscount that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountFindFirstArgs} args - Arguments to find a ProductDiscount
+     * @example
+     * // Get one ProductDiscount
+     * const productDiscount = await prisma.productDiscount.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ProductDiscountFindFirstArgs>(args?: SelectSubset<T, ProductDiscountFindFirstArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ProductDiscount that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountFindFirstOrThrowArgs} args - Arguments to find a ProductDiscount
+     * @example
+     * // Get one ProductDiscount
+     * const productDiscount = await prisma.productDiscount.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ProductDiscountFindFirstOrThrowArgs>(args?: SelectSubset<T, ProductDiscountFindFirstOrThrowArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ProductDiscounts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ProductDiscounts
+     * const productDiscounts = await prisma.productDiscount.findMany()
+     * 
+     * // Get first 10 ProductDiscounts
+     * const productDiscounts = await prisma.productDiscount.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const productDiscountWithIdOnly = await prisma.productDiscount.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ProductDiscountFindManyArgs>(args?: SelectSubset<T, ProductDiscountFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ProductDiscount.
+     * @param {ProductDiscountCreateArgs} args - Arguments to create a ProductDiscount.
+     * @example
+     * // Create one ProductDiscount
+     * const ProductDiscount = await prisma.productDiscount.create({
+     *   data: {
+     *     // ... data to create a ProductDiscount
+     *   }
+     * })
+     * 
+     */
+    create<T extends ProductDiscountCreateArgs>(args: SelectSubset<T, ProductDiscountCreateArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ProductDiscounts.
+     * @param {ProductDiscountCreateManyArgs} args - Arguments to create many ProductDiscounts.
+     * @example
+     * // Create many ProductDiscounts
+     * const productDiscount = await prisma.productDiscount.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ProductDiscountCreateManyArgs>(args?: SelectSubset<T, ProductDiscountCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a ProductDiscount.
+     * @param {ProductDiscountDeleteArgs} args - Arguments to delete one ProductDiscount.
+     * @example
+     * // Delete one ProductDiscount
+     * const ProductDiscount = await prisma.productDiscount.delete({
+     *   where: {
+     *     // ... filter to delete one ProductDiscount
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ProductDiscountDeleteArgs>(args: SelectSubset<T, ProductDiscountDeleteArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ProductDiscount.
+     * @param {ProductDiscountUpdateArgs} args - Arguments to update one ProductDiscount.
+     * @example
+     * // Update one ProductDiscount
+     * const productDiscount = await prisma.productDiscount.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ProductDiscountUpdateArgs>(args: SelectSubset<T, ProductDiscountUpdateArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ProductDiscounts.
+     * @param {ProductDiscountDeleteManyArgs} args - Arguments to filter ProductDiscounts to delete.
+     * @example
+     * // Delete a few ProductDiscounts
+     * const { count } = await prisma.productDiscount.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ProductDiscountDeleteManyArgs>(args?: SelectSubset<T, ProductDiscountDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ProductDiscounts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ProductDiscounts
+     * const productDiscount = await prisma.productDiscount.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ProductDiscountUpdateManyArgs>(args: SelectSubset<T, ProductDiscountUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ProductDiscount.
+     * @param {ProductDiscountUpsertArgs} args - Arguments to update or create a ProductDiscount.
+     * @example
+     * // Update or create a ProductDiscount
+     * const productDiscount = await prisma.productDiscount.upsert({
+     *   create: {
+     *     // ... data to create a ProductDiscount
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ProductDiscount we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ProductDiscountUpsertArgs>(args: SelectSubset<T, ProductDiscountUpsertArgs<ExtArgs>>): Prisma__ProductDiscountClient<$Result.GetResult<Prisma.$ProductDiscountPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ProductDiscounts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountCountArgs} args - Arguments to filter ProductDiscounts to count.
+     * @example
+     * // Count the number of ProductDiscounts
+     * const count = await prisma.productDiscount.count({
+     *   where: {
+     *     // ... the filter for the ProductDiscounts we want to count
+     *   }
+     * })
+    **/
+    count<T extends ProductDiscountCountArgs>(
+      args?: Subset<T, ProductDiscountCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ProductDiscountCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ProductDiscount.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ProductDiscountAggregateArgs>(args: Subset<T, ProductDiscountAggregateArgs>): Prisma.PrismaPromise<GetProductDiscountAggregateType<T>>
+
+    /**
+     * Group by ProductDiscount.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProductDiscountGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ProductDiscountGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ProductDiscountGroupByArgs['orderBy'] }
+        : { orderBy?: ProductDiscountGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ProductDiscountGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetProductDiscountGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ProductDiscount model
+   */
+  readonly fields: ProductDiscountFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ProductDiscount.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ProductDiscountClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ProductDiscount model
+   */
+  interface ProductDiscountFieldRefs {
+    readonly id: FieldRef<"ProductDiscount", 'Int'>
+    readonly name: FieldRef<"ProductDiscount", 'String'>
+    readonly type: FieldRef<"ProductDiscount", 'String'>
+    readonly value: FieldRef<"ProductDiscount", 'Float'>
+    readonly startDate: FieldRef<"ProductDiscount", 'DateTime'>
+    readonly endDate: FieldRef<"ProductDiscount", 'DateTime'>
+    readonly isActive: FieldRef<"ProductDiscount", 'Boolean'>
+    readonly productIds: FieldRef<"ProductDiscount", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ProductDiscount findUnique
+   */
+  export type ProductDiscountFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter, which ProductDiscount to fetch.
+     */
+    where: ProductDiscountWhereUniqueInput
+  }
+
+  /**
+   * ProductDiscount findUniqueOrThrow
+   */
+  export type ProductDiscountFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter, which ProductDiscount to fetch.
+     */
+    where: ProductDiscountWhereUniqueInput
+  }
+
+  /**
+   * ProductDiscount findFirst
+   */
+  export type ProductDiscountFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter, which ProductDiscount to fetch.
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProductDiscounts to fetch.
+     */
+    orderBy?: ProductDiscountOrderByWithRelationInput | ProductDiscountOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ProductDiscounts.
+     */
+    cursor?: ProductDiscountWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProductDiscounts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProductDiscounts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ProductDiscounts.
+     */
+    distinct?: ProductDiscountScalarFieldEnum | ProductDiscountScalarFieldEnum[]
+  }
+
+  /**
+   * ProductDiscount findFirstOrThrow
+   */
+  export type ProductDiscountFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter, which ProductDiscount to fetch.
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProductDiscounts to fetch.
+     */
+    orderBy?: ProductDiscountOrderByWithRelationInput | ProductDiscountOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ProductDiscounts.
+     */
+    cursor?: ProductDiscountWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProductDiscounts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProductDiscounts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ProductDiscounts.
+     */
+    distinct?: ProductDiscountScalarFieldEnum | ProductDiscountScalarFieldEnum[]
+  }
+
+  /**
+   * ProductDiscount findMany
+   */
+  export type ProductDiscountFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter, which ProductDiscounts to fetch.
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProductDiscounts to fetch.
+     */
+    orderBy?: ProductDiscountOrderByWithRelationInput | ProductDiscountOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ProductDiscounts.
+     */
+    cursor?: ProductDiscountWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProductDiscounts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProductDiscounts.
+     */
+    skip?: number
+    distinct?: ProductDiscountScalarFieldEnum | ProductDiscountScalarFieldEnum[]
+  }
+
+  /**
+   * ProductDiscount create
+   */
+  export type ProductDiscountCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * The data needed to create a ProductDiscount.
+     */
+    data: XOR<ProductDiscountCreateInput, ProductDiscountUncheckedCreateInput>
+  }
+
+  /**
+   * ProductDiscount createMany
+   */
+  export type ProductDiscountCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ProductDiscounts.
+     */
+    data: ProductDiscountCreateManyInput | ProductDiscountCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ProductDiscount update
+   */
+  export type ProductDiscountUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * The data needed to update a ProductDiscount.
+     */
+    data: XOR<ProductDiscountUpdateInput, ProductDiscountUncheckedUpdateInput>
+    /**
+     * Choose, which ProductDiscount to update.
+     */
+    where: ProductDiscountWhereUniqueInput
+  }
+
+  /**
+   * ProductDiscount updateMany
+   */
+  export type ProductDiscountUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ProductDiscounts.
+     */
+    data: XOR<ProductDiscountUpdateManyMutationInput, ProductDiscountUncheckedUpdateManyInput>
+    /**
+     * Filter which ProductDiscounts to update
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * Limit how many ProductDiscounts to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ProductDiscount upsert
+   */
+  export type ProductDiscountUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * The filter to search for the ProductDiscount to update in case it exists.
+     */
+    where: ProductDiscountWhereUniqueInput
+    /**
+     * In case the ProductDiscount found by the `where` argument doesn't exist, create a new ProductDiscount with this data.
+     */
+    create: XOR<ProductDiscountCreateInput, ProductDiscountUncheckedCreateInput>
+    /**
+     * In case the ProductDiscount was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ProductDiscountUpdateInput, ProductDiscountUncheckedUpdateInput>
+  }
+
+  /**
+   * ProductDiscount delete
+   */
+  export type ProductDiscountDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+    /**
+     * Filter which ProductDiscount to delete.
+     */
+    where: ProductDiscountWhereUniqueInput
+  }
+
+  /**
+   * ProductDiscount deleteMany
+   */
+  export type ProductDiscountDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ProductDiscounts to delete
+     */
+    where?: ProductDiscountWhereInput
+    /**
+     * Limit how many ProductDiscounts to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ProductDiscount without action
+   */
+  export type ProductDiscountDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProductDiscount
+     */
+    select?: ProductDiscountSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProductDiscount
+     */
+    omit?: ProductDiscountOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -8890,6 +9926,20 @@ export namespace Prisma {
   export type SettingScalarFieldEnum = (typeof SettingScalarFieldEnum)[keyof typeof SettingScalarFieldEnum]
 
 
+  export const ProductDiscountScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    type: 'type',
+    value: 'value',
+    startDate: 'startDate',
+    endDate: 'endDate',
+    isActive: 'isActive',
+    productIds: 'productIds'
+  };
+
+  export type ProductDiscountScalarFieldEnum = (typeof ProductDiscountScalarFieldEnum)[keyof typeof ProductDiscountScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -8989,6 +10039,15 @@ export namespace Prisma {
   };
 
   export type SettingOrderByRelevanceFieldEnum = (typeof SettingOrderByRelevanceFieldEnum)[keyof typeof SettingOrderByRelevanceFieldEnum]
+
+
+  export const ProductDiscountOrderByRelevanceFieldEnum: {
+    name: 'name',
+    type: 'type',
+    productIds: 'productIds'
+  };
+
+  export type ProductDiscountOrderByRelevanceFieldEnum = (typeof ProductDiscountOrderByRelevanceFieldEnum)[keyof typeof ProductDiscountOrderByRelevanceFieldEnum]
 
 
   /**
@@ -9636,6 +10695,76 @@ export namespace Prisma {
     id?: IntWithAggregatesFilter<"Setting"> | number
     key?: StringWithAggregatesFilter<"Setting"> | string
     value?: StringWithAggregatesFilter<"Setting"> | string
+  }
+
+  export type ProductDiscountWhereInput = {
+    AND?: ProductDiscountWhereInput | ProductDiscountWhereInput[]
+    OR?: ProductDiscountWhereInput[]
+    NOT?: ProductDiscountWhereInput | ProductDiscountWhereInput[]
+    id?: IntFilter<"ProductDiscount"> | number
+    name?: StringFilter<"ProductDiscount"> | string
+    type?: StringFilter<"ProductDiscount"> | string
+    value?: FloatFilter<"ProductDiscount"> | number
+    startDate?: DateTimeFilter<"ProductDiscount"> | Date | string
+    endDate?: DateTimeFilter<"ProductDiscount"> | Date | string
+    isActive?: BoolFilter<"ProductDiscount"> | boolean
+    productIds?: StringFilter<"ProductDiscount"> | string
+  }
+
+  export type ProductDiscountOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    type?: SortOrder
+    value?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    isActive?: SortOrder
+    productIds?: SortOrder
+    _relevance?: ProductDiscountOrderByRelevanceInput
+  }
+
+  export type ProductDiscountWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: ProductDiscountWhereInput | ProductDiscountWhereInput[]
+    OR?: ProductDiscountWhereInput[]
+    NOT?: ProductDiscountWhereInput | ProductDiscountWhereInput[]
+    name?: StringFilter<"ProductDiscount"> | string
+    type?: StringFilter<"ProductDiscount"> | string
+    value?: FloatFilter<"ProductDiscount"> | number
+    startDate?: DateTimeFilter<"ProductDiscount"> | Date | string
+    endDate?: DateTimeFilter<"ProductDiscount"> | Date | string
+    isActive?: BoolFilter<"ProductDiscount"> | boolean
+    productIds?: StringFilter<"ProductDiscount"> | string
+  }, "id">
+
+  export type ProductDiscountOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    type?: SortOrder
+    value?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    isActive?: SortOrder
+    productIds?: SortOrder
+    _count?: ProductDiscountCountOrderByAggregateInput
+    _avg?: ProductDiscountAvgOrderByAggregateInput
+    _max?: ProductDiscountMaxOrderByAggregateInput
+    _min?: ProductDiscountMinOrderByAggregateInput
+    _sum?: ProductDiscountSumOrderByAggregateInput
+  }
+
+  export type ProductDiscountScalarWhereWithAggregatesInput = {
+    AND?: ProductDiscountScalarWhereWithAggregatesInput | ProductDiscountScalarWhereWithAggregatesInput[]
+    OR?: ProductDiscountScalarWhereWithAggregatesInput[]
+    NOT?: ProductDiscountScalarWhereWithAggregatesInput | ProductDiscountScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"ProductDiscount"> | number
+    name?: StringWithAggregatesFilter<"ProductDiscount"> | string
+    type?: StringWithAggregatesFilter<"ProductDiscount"> | string
+    value?: FloatWithAggregatesFilter<"ProductDiscount"> | number
+    startDate?: DateTimeWithAggregatesFilter<"ProductDiscount"> | Date | string
+    endDate?: DateTimeWithAggregatesFilter<"ProductDiscount"> | Date | string
+    isActive?: BoolWithAggregatesFilter<"ProductDiscount"> | boolean
+    productIds?: StringWithAggregatesFilter<"ProductDiscount"> | string
   }
 
   export type UserCreateInput = {
@@ -10295,6 +11424,80 @@ export namespace Prisma {
     id?: IntFieldUpdateOperationsInput | number
     key?: StringFieldUpdateOperationsInput | string
     value?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ProductDiscountCreateInput = {
+    name: string
+    type?: string
+    value: number
+    startDate: Date | string
+    endDate: Date | string
+    isActive?: boolean
+    productIds: string
+  }
+
+  export type ProductDiscountUncheckedCreateInput = {
+    id?: number
+    name: string
+    type?: string
+    value: number
+    startDate: Date | string
+    endDate: Date | string
+    isActive?: boolean
+    productIds: string
+  }
+
+  export type ProductDiscountUpdateInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    value?: FloatFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    endDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    productIds?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ProductDiscountUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    value?: FloatFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    endDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    productIds?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ProductDiscountCreateManyInput = {
+    id?: number
+    name: string
+    type?: string
+    value: number
+    startDate: Date | string
+    endDate: Date | string
+    isActive?: boolean
+    productIds: string
+  }
+
+  export type ProductDiscountUpdateManyMutationInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    value?: FloatFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    endDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    productIds?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type ProductDiscountUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    value?: FloatFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    endDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    productIds?: StringFieldUpdateOperationsInput | string
   }
 
   export type IntFilter<$PrismaModel = never> = {
@@ -10973,6 +12176,55 @@ export namespace Prisma {
 
   export type SettingSumOrderByAggregateInput = {
     id?: SortOrder
+  }
+
+  export type ProductDiscountOrderByRelevanceInput = {
+    fields: ProductDiscountOrderByRelevanceFieldEnum | ProductDiscountOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type ProductDiscountCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    type?: SortOrder
+    value?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    isActive?: SortOrder
+    productIds?: SortOrder
+  }
+
+  export type ProductDiscountAvgOrderByAggregateInput = {
+    id?: SortOrder
+    value?: SortOrder
+  }
+
+  export type ProductDiscountMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    type?: SortOrder
+    value?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    isActive?: SortOrder
+    productIds?: SortOrder
+  }
+
+  export type ProductDiscountMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    type?: SortOrder
+    value?: SortOrder
+    startDate?: SortOrder
+    endDate?: SortOrder
+    isActive?: SortOrder
+    productIds?: SortOrder
+  }
+
+  export type ProductDiscountSumOrderByAggregateInput = {
+    id?: SortOrder
+    value?: SortOrder
   }
 
   export type OrderCreateNestedManyWithoutCustomerInput = {

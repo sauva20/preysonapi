@@ -1,8 +1,8 @@
 generator client {
   provider      = "prisma-client-js"
   engineType    = "binary"
-  output        = "./generated/client"
   binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+  output        = "./generated/client"
 }
 
 datasource db {
@@ -129,4 +129,17 @@ model Setting {
   value String @db.Text
 
   @@map("setting")
+}
+
+model ProductDiscount {
+  id         Int      @id @default(autoincrement())
+  name       String
+  type       String   @default("percentage")
+  value      Float
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean  @default(true)
+  productIds String   @db.Text
+
+  @@map("product_discount")
 }

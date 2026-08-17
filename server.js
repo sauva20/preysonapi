@@ -635,6 +635,74 @@ app.patch('/api/campaigns/:id/status', async (req, res) => {
 });
 
 // ==========================
+// PRODUCT DISCOUNTS API
+// ==========================
+app.get('/api/discounts', async (req, res) => {
+  try {
+    const discounts = await prisma.productDiscount.findMany();
+    // Parse the productIds JSON string back to array before sending
+    res.json(discounts.map(d => ({
+      ...d,
+      productIds: JSON.parse(d.productIds)
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/discounts', async (req, res) => {
+  try {
+    const { name, type, value, startDate, endDate, productIds } = req.body;
+    const discount = await prisma.productDiscount.create({
+      data: {
+        name,
+        type,
+        value: parseFloat(value),
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        productIds: JSON.stringify(productIds || []),
+        isActive: true
+      }
+    });
+    res.json({ ...discount, productIds: JSON.parse(discount.productIds) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/discounts/:id', async (req, res) => {
+  try {
+    const { name, type, value, startDate, endDate, productIds, isActive } = req.body;
+    const discount = await prisma.productDiscount.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        name,
+        type,
+        value: parseFloat(value),
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        productIds: JSON.stringify(productIds || []),
+        isActive
+      }
+    });
+    res.json({ ...discount, productIds: JSON.parse(discount.productIds) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/discounts/:id', async (req, res) => {
+  try {
+    await prisma.productDiscount.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/discounts/:id/status', async (req, res) => {
+  try {
+    const discount = await prisma.productDiscount.update({
+      where: { id: parseInt(req.params.id) },
+      data: { isActive: req.body.isActive }
+    });
+    res.json({ ...discount, productIds: JSON.parse(discount.productIds) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==========================
 // STAFF API
 // ==========================
 
