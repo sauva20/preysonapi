@@ -1492,8 +1492,8 @@ app.delete('/api/orders/:id', async (req, res) => {
   }
 });
 
-// Background cron: Check for expired orders every 1 minute
-setInterval(async () => {
+// Background cron endpoint: Check for expired orders (To be called via Hostinger Cron Job)
+app.get('/api/cron/expire-orders', async (req, res) => {
   try {
     const expiredOrders = await prisma.order.findMany({
       where: {
@@ -1505,10 +1505,12 @@ setInterval(async () => {
       console.log(`Auto-expiring order ${order.id}...`);
       await restoreOrderStock(order.id);
     }
+    res.json({ success: true, count: expiredOrders.length, message: 'Expired orders processed' });
   } catch (e) {
     console.error("Cron Error: Failed to expire orders", e);
+    res.status(500).json({ error: 'Failed to expire orders' });
   }
-}, 60 * 1000);
+});
 
 
 app.post('/api/orders/:id/ship', async (req, res) => {
