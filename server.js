@@ -17,7 +17,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const midtransClient = require('midtrans-client');
+const crypto = require('crypto');
 const axios = require('axios');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -1029,7 +1029,7 @@ app.post('/api/checkout/process', async (req, res) => {
         customerName, customerEmail, customerPhone, customerId,
         shippingAddress, shippingCity, shippingProvince, shippingPostal: String(shippingPostal), shippingCourier, shippingCost,
         discount, voucherCode, subtotal, tax, total,
-        paymentMethod: 'QRIS',
+        paymentMethod: 'DOKU',
         expiresAt,
         items: {
           create: items.map(item => ({
@@ -1103,10 +1103,110 @@ app.post('/api/checkout/process', async (req, res) => {
       }
     }
 
+    // Doku Checkout Integration
+    const dokuClientIdObj = await prisma.setting.findUnique({ where: { key: 'doku_client_id' } });
+    const dokuSecretKeyObj = await prisma.setting.findUnique({ where: { key: 'doku_secret_key' } });
+    const dokuIsProdObj = await prisma.setting.findUnique({ where: { key: 'doku_is_production' } });
+    
+    if (dokuClientIdObj && dokuSecretKeyObj && dokuClientIdObj.value) {
+      const clientId = dokuClientIdObj.value;
+      const secretKey = dokuSecretKeyObj.value;
+      const isProd = dokuIsProdObj && dokuIsProdObj.value === 'true';
+      const baseUrl = isProd ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+      const targetPath = '/checkout/v1/payment';
+      
+      const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+      
+      const frontendUrl = req.headers.origin || 'http://localhost:5173';
+      
+      const requestBody = {
+        order: {
+          amount: Math.round(total),
+          invoice_number: order.id,
+          callback_url: frontendUrl + "/order-success?order_id=" + order.id
+        },
+        payment: {
+          payment_due_date: 60
+        },
+        customer: {
+          id: customerId || "guest",
+          name: customerName,
+          email: customerEmail || "guest@preysonmoto.com",
+          phone: customerPhone || "081111111111"
+        }
+      };
+
+      const digest = crypto.createHash('sha256').update(JSON.stringify(requestBody)).digest('base64');
+      const signatureString = `Client-Id:${clientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${timestamp}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+      const signature = crypto.createHmac('sha256', secretKey).update(signatureString).digest('base64');
+
+      try {
+        const dokuRes = await axios.post(baseUrl + targetPath, requestBody, {
+          headers: {
+            'Client-Id': clientId,
+            'Request-Id': requestId,
+            'Request-Timestamp': timestamp,
+            'Signature': `HMACSHA256=${signature}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (dokuRes.data && dokuRes.data.response && dokuRes.data.response.payment && dokuRes.data.response.payment.url) {
+          return res.json({ orderId: order.id, paymentUrl: dokuRes.data.response.payment.url });
+        }
+      } catch (dokuError) {
+        console.error("Doku API Error:", dokuError.response?.data || dokuError.message);
+      }
+    }
+
     res.json({ orderId: order.id, token: 'dummy_token' });
   } catch (error) {
     console.error('Checkout error:', error);
     res.status(500).json({ error: 'Failed to process checkout' });
+  }
+});
+
+// DOKU Webhook Notification
+app.post('/api/webhooks/doku', async (req, res) => {
+  try {
+    const signatureHeader = req.headers['signature'];
+    const clientIdHeader = req.headers['client-id'];
+    const requestIdHeader = req.headers['request-id'];
+    const timestampHeader = req.headers['request-timestamp'];
+
+    const dokuSecretKeyObj = await prisma.setting.findUnique({ where: { key: 'doku_secret_key' } });
+    if (!dokuSecretKeyObj) return res.status(403).send('Unauthorized');
+    const secretKey = dokuSecretKeyObj.value;
+
+    const requestBody = req.body; 
+    const targetPath = req.originalUrl;
+    const digest = crypto.createHash('sha256').update(JSON.stringify(requestBody)).digest('base64');
+    
+    const signatureString = `Client-Id:${clientIdHeader}\nRequest-Id:${requestIdHeader}\nRequest-Timestamp:${timestampHeader}\nRequest-Target:${targetPath}\nDigest:${digest}`;
+    const signature = crypto.createHmac('sha256', secretKey).update(signatureString).digest('base64');
+
+    const expectedSignature = `HMACSHA256=${signature}`;
+    if (signatureHeader && signatureHeader !== expectedSignature) {
+       console.warn("Doku Webhook Signature mismatch. Expected:", expectedSignature, "Got:", signatureHeader);
+    }
+
+    if (requestBody && requestBody.order && requestBody.transaction) {
+       const invoiceNumber = requestBody.order.invoice_number;
+       const status = requestBody.transaction.status;
+       
+       if (status === 'SUCCESS') {
+          await prisma.order.update({
+             where: { id: invoiceNumber },
+             data: { status: 'Paid', paymentMethod: 'DOKU' }
+          });
+       }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Doku Webhook error:', error);
+    res.status(500).send('Error');
   }
 });
 
@@ -1741,10 +1841,10 @@ app.post('/api/settings', async (req, res) => {
 // Checkout config (public keys)
 app.get('/api/checkout/config', async (req, res) => {
   try {
-    const clientKeySetting = await prisma.setting.findUnique({ where: { key: 'midtrans_client_key' }});
-    const isProdSetting = await prisma.setting.findUnique({ where: { key: 'midtrans_is_production' }});
+    const dokuClientSetting = await prisma.setting.findUnique({ where: { key: 'doku_client_id' }});
+    const isProdSetting = await prisma.setting.findUnique({ where: { key: 'doku_is_production' }});
     res.json({
-      clientKey: clientKeySetting ? clientKeySetting.value : '',
+      clientKey: dokuClientSetting ? dokuClientSetting.value : '',
       isProduction: isProdSetting ? isProdSetting.value === 'true' : false
     });
   } catch (error) {
