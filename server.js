@@ -358,6 +358,52 @@ app.patch('/api/products/:id/toggle-soldout', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+app.post('/api/products/scan-stock', async (req, res) => {
+  try {
+    const { sku, qty } = req.body;
+    if (!sku || !qty) return res.status(400).json({ error: 'SKU and quantity are required' });
+    
+    // Find product containing this SKU (optimistic search)
+    const products = await prisma.product.findMany({
+      where: { sizes: { contains: sku } }
+    });
+    
+    let matchedProduct = null;
+    let newSizes = [];
+    
+    for (const p of products) {
+      const sizes = safeParse(p.sizes, []);
+      const sizeIndex = sizes.findIndex(s => s.sku === sku);
+      if (sizeIndex !== -1) {
+        matchedProduct = p;
+        newSizes = [...sizes];
+        newSizes[sizeIndex].stock = (parseInt(newSizes[sizeIndex].stock) || 0) + parseInt(qty);
+        break;
+      }
+    }
+    
+    if (!matchedProduct) {
+      return res.status(404).json({ error: 'SKU not found in any product' });
+    }
+    
+    const updated = await prisma.product.update({
+      where: { id: matchedProduct.id },
+      data: {
+        stock: matchedProduct.stock + parseInt(qty),
+        sizes: JSON.stringify(newSizes)
+      },
+      include: { category: true }
+    });
+    
+    const _io = app.get('io');
+    if (_io) _io.emit('stock_updated');
+    
+    res.json(parseProduct(updated, req));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/products/:id', async (req, res) => {
   try {
     // Delete order items referencing this product first (or cascade in prisma)
