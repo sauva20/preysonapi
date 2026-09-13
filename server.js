@@ -4,12 +4,12 @@ const dotenv = require('dotenv');
 const { execSync } = require('child_process');
 
 // Auto-generate Prisma on startup for Hostinger environments
-try {
-  console.log('Ensuring Prisma Client is generated...');
-  execSync('npx prisma generate', { stdio: 'ignore' });
-} catch (e) {
-  console.error('Auto-generate Prisma failed. It might already be generated.');
-}
+// try {
+//   console.log('Ensuring Prisma Client is generated...');
+//   execSync('npx prisma generate', { stdio: 'ignore' });
+// } catch (e) {
+//   console.error('Auto-generate Prisma failed. It might already be generated.');
+// }
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
