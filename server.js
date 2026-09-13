@@ -405,6 +405,42 @@ app.post('/api/products/scan-stock', async (req, res) => {
   }
 });
 
+app.post('/api/products/auto-generate-skus', async (req, res) => {
+  try {
+    const products = await prisma.product.findMany();
+    let updatedCount = 0;
+
+    for (const product of products) {
+      const sizes = safeParse(product.sizes, []);
+      let changed = false;
+
+      const newSizes = sizes.map(s => {
+        let sizeObj = typeof s === 'string' ? { name: s, stock: 0 } : s;
+        if (!sizeObj.sku || sizeObj.sku.trim() === '') {
+          const prodPrefix = (product.name || 'PRD').replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+          const sizePrefix = (sizeObj.name || 'X').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+          const random = Math.floor(1000 + Math.random() * 9000);
+          sizeObj.sku = `PRD-${prodPrefix}-${sizePrefix}-${random}`;
+          changed = true;
+        }
+        return sizeObj;
+      });
+
+      if (changed) {
+        await prisma.product.update({
+          where: { id: product.id },
+          data: { sizes: JSON.stringify(newSizes) }
+        });
+        updatedCount++;
+      }
+    }
+
+    res.json({ message: `Successfully generated SKUs for ${updatedCount} products.` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/products/:id', async (req, res) => {
   try {
     // Delete order items referencing this product first (or cascade in prisma)
