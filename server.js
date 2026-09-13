@@ -67,11 +67,12 @@ function createPrismaClient() {
               if (!isRestarting) {
                 isRestarting = true;
                 console.error("[PRISMA FATAL] Engine Panic detected! Initiating graceful restart in 3 seconds to avoid Hostinger 503 loop...");
+                console.error("ACTUAL PRISMA ERROR:", error);
                 setTimeout(() => {
                   process.exit(1);
                 }, 3000);
               }
-              throw new Error("Sistem sedang melakukan pemulihan dari mode hibernasi. Mohon tunggu 5 detik dan ulangi kembali.");
+              throw new Error("Prisma Error: " + (error.message || String(error)));
             }
             throw error;
           }
