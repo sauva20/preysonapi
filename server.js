@@ -1,15 +1,30 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
-// Auto-generate Prisma on startup for Hostinger environments
-// try {
-//   console.log('Ensuring Prisma Client is generated...');
-//   execSync('npx prisma generate', { stdio: 'ignore' });
-// } catch (e) {
-//   console.error('Auto-generate Prisma failed. It might already be generated.');
-// }
+// Auto-generate Prisma on startup ONLY if the engine is missing (Hostinger fix)
+try {
+  const prismaDir = path.join(__dirname, 'node_modules', '.prisma', 'client');
+  let needsGenerate = true;
+  if (fs.existsSync(prismaDir)) {
+    const files = fs.readdirSync(prismaDir);
+    // Check if the binary query engine exists
+    needsGenerate = !files.some(f => f.startsWith('query-engine-') && !f.endsWith('.d.ts'));
+  }
+  
+  if (needsGenerate) {
+    console.log('Prisma Binary Engine is missing! Running npx prisma generate...');
+    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('Prisma generate completed successfully.');
+  } else {
+    console.log('Prisma Engine found. Skipping generate to save RAM.');
+  }
+} catch (e) {
+  console.error('Auto-generate Prisma failed. It might already be generated:', e.message);
+}
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
