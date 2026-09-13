@@ -30,8 +30,7 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+
 const crypto = require('crypto');
 const axios = require('axios');
 const http = require('http');
