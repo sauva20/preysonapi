@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('./prisma/generated/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
