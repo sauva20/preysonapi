@@ -1,5 +1,23 @@
 [
   {
+    "id": "act-1789335955111-ipl2",
+    "timestamp": "2026-09-13T21:45:55.103Z",
+    "category": "Inventory",
+    "title": "Stock In via Barcode",
+    "description": "Added +1 stock to SKU: PRD-PMC-S-5762 (PMC X AOS Yellow Gloves - )",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
+    "id": "act-1789335933650-usy0",
+    "timestamp": "2026-09-13T21:45:33.632Z",
+    "category": "Inventory",
+    "title": "Stock In via Barcode",
+    "description": "Added +1 stock to SKU: PRD-PMC-S-5762 (PMC X AOS Yellow Gloves - )",
+    "user": "Admin Preyson",
+    "status": "success"
+  },
+  {
     "id": "act-1786944222039-4tnv",
     "timestamp": "2026-08-17T05:23:42.001Z",
     "category": "Promo",
