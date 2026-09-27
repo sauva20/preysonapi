@@ -289,10 +289,10 @@ app.get('/api/products/:id', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, sku, price, eventPrice, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
+    const { name, sku, price, eventPrice, hpp, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.create({
       data: {
-        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : 0, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : 0, image,
+        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : 0, hpp: hpp !== undefined ? parseFloat(hpp) : 0, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : 0, image,
         isSoldOut: isSoldOut ? Boolean(isSoldOut) : false,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
@@ -312,11 +312,11 @@ app.post('/api/products', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
   try {
-    const { name, sku, price, eventPrice, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
+    const { name, sku, price, eventPrice, hpp, stock, eventStock, image, categoryId, description, sizes, sizeGuide, thumbnails, features, materials, washing, aestheticImage, isSoldOut } = req.body;
     const product = await prisma.product.update({
       where: { id: parseInt(req.params.id) },
       data: {
-        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : undefined, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : undefined, image,
+        name, sku, price: parseFloat(price), eventPrice: eventPrice !== undefined ? parseFloat(eventPrice) : undefined, hpp: hpp !== undefined ? parseFloat(hpp) : undefined, stock: parseInt(stock), eventStock: eventStock !== undefined ? parseInt(eventStock) : undefined, image,
         isSoldOut: isSoldOut !== undefined ? Boolean(isSoldOut) : undefined,
         categoryId: categoryId ? parseInt(categoryId) : null,
         description: description || '',
@@ -1097,7 +1097,7 @@ app.post('/api/checkout/process', async (req, res) => {
     if (_io) _io.emit('stock_updated');
 
     const customOrderId = 'PRY-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     const order = await prisma.order.create({
       data: {
