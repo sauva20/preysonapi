@@ -5,4 +5,4 @@ node_modules
 uploads/
 uploads/*
 !uploads/.gitkeep  
- 
+prisma/generated/
